@@ -52,6 +52,7 @@ library
                      , Duckling.Rules.FR
                      , Duckling.Rules.GA
                      , Duckling.Rules.HE
+                     , Duckling.Rules.HI
                      , Duckling.Rules.HR
                      , Duckling.Rules.HU
                      , Duckling.Rules.ID
@@ -93,6 +94,7 @@ library
                      , Duckling.Ranking.Classifiers.FR_XX
                      , Duckling.Ranking.Classifiers.GA_XX
                      , Duckling.Ranking.Classifiers.HE_XX
+                     , Duckling.Ranking.Classifiers.HI_XX
                      , Duckling.Ranking.Classifiers.HR_XX
                      , Duckling.Ranking.Classifiers.HU_XX
                      , Duckling.Ranking.Classifiers.ID_XX
@@ -134,6 +136,7 @@ library
                      , Duckling.Dimensions.FR
                      , Duckling.Dimensions.GA
                      , Duckling.Dimensions.HE
+                     , Duckling.Dimensions.HI
                      , Duckling.Dimensions.HR
                      , Duckling.Dimensions.HU
                      , Duckling.Dimensions.ID
@@ -155,6 +158,8 @@ library
                      , Duckling.Dimensions.ZH
 
                      -- AmountOfMoney
+                     , Duckling.AmountOfMoney.AR.Corpus
+                     , Duckling.AmountOfMoney.AR.Rules
                      , Duckling.AmountOfMoney.EN.Corpus
                      , Duckling.AmountOfMoney.EN.Rules
                      , Duckling.AmountOfMoney.BG.Corpus
@@ -293,6 +298,8 @@ library
                      , Duckling.Numeral.GA.Rules
                      , Duckling.Numeral.HE.Corpus
                      , Duckling.Numeral.HE.Rules
+                     , Duckling.Numeral.HI.Corpus
+                     , Duckling.Numeral.HI.Rules
                      , Duckling.Numeral.HR.Corpus
                      , Duckling.Numeral.HR.Rules
                      , Duckling.Numeral.HU.Corpus
@@ -401,6 +408,8 @@ library
                      , Duckling.PhoneNumber.Types
 
                      -- Quantity
+                     , Duckling.Quantity.AR.Corpus
+                     , Duckling.Quantity.AR.Rules
                      , Duckling.Quantity.EN.Corpus
                      , Duckling.Quantity.EN.Rules
                      , Duckling.Quantity.FR.Corpus
@@ -422,6 +431,8 @@ library
                      , Duckling.Regex.Types
 
                      -- Temperature
+                     , Duckling.Temperature.AR.Corpus
+                     , Duckling.Temperature.AR.Rules
                      , Duckling.Temperature.EN.Corpus
                      , Duckling.Temperature.EN.Rules
                      , Duckling.Temperature.ES.Corpus
@@ -451,6 +462,8 @@ library
                      , Duckling.Temperature.Types
 
                      -- Time
+                     , Duckling.Time.AR.Corpus
+                     , Duckling.Time.AR.Rules
                      , Duckling.Time.DA.Corpus
                      , Duckling.Time.DA.Rules
                      , Duckling.Time.DE.Corpus
@@ -563,6 +576,8 @@ library
                      , Duckling.Url.Types
 
                      -- Volume
+                     , Duckling.Volume.AR.Corpus
+                     , Duckling.Volume.AR.Rules
                      , Duckling.Volume.EN.Corpus
                      , Duckling.Volume.EN.Rules
                      , Duckling.Volume.ES.Corpus
@@ -633,6 +648,7 @@ test-suite duckling-test
                      , Duckling.Dimensions.Tests
 
                      -- AmountOfMoney
+                     , Duckling.AmountOfMoney.AR.Tests
                      , Duckling.AmountOfMoney.EN.Tests
                      , Duckling.AmountOfMoney.BG.Tests
                      , Duckling.AmountOfMoney.ES.Tests
@@ -703,6 +719,7 @@ test-suite duckling-test
                      , Duckling.Numeral.FR.Tests
                      , Duckling.Numeral.GA.Tests
                      , Duckling.Numeral.HE.Tests
+                     , Duckling.Numeral.HI.Tests
                      , Duckling.Numeral.HR.Tests
                      , Duckling.Numeral.HU.Tests
                      , Duckling.Numeral.ID.Tests
@@ -759,6 +776,7 @@ test-suite duckling-test
                      , Duckling.PhoneNumber.Tests
 
                      -- Quantity
+                     , Duckling.Quantity.AR.Tests
                      , Duckling.Quantity.EN.Tests
                      , Duckling.Quantity.FR.Tests
                      , Duckling.Quantity.HR.Tests
@@ -769,6 +787,7 @@ test-suite duckling-test
                      , Duckling.Quantity.Tests
 
                      -- Temperature
+                     , Duckling.Temperature.AR.Tests
                      , Duckling.Temperature.EN.Tests
                      , Duckling.Temperature.ES.Tests
                      , Duckling.Temperature.FR.Tests
@@ -784,6 +803,7 @@ test-suite duckling-test
                      , Duckling.Temperature.Tests
 
                      -- Time
+                     , Duckling.Time.AR.Tests
                      , Duckling.Time.DA.Tests
                      , Duckling.Time.DE.Tests
                      , Duckling.Time.EL.Tests
@@ -810,6 +830,7 @@ test-suite duckling-test
                      , Duckling.Url.Tests
 
                      -- Volume
+                     , Duckling.Volume.AR.Tests
                      , Duckling.Volume.EN.Tests
                      , Duckling.Volume.ES.Tests
                      , Duckling.Volume.FR.Tests

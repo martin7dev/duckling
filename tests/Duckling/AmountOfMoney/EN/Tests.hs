@@ -7,7 +7,8 @@
 
 
 module Duckling.AmountOfMoney.EN.Tests
-  ( tests ) where
+  ( tests
+  ) where
 
 import Data.String
 import Prelude

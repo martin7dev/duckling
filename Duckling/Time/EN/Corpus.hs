@@ -40,6 +40,7 @@ defaultCorpus = (testContext, allExamples ++ custom)
                  [ "10/31/1974"
                  , "10/31/74"
                  , "10-31-74"
+                 , "10.31.1974"
                  ]
       , examples (datetime (2013, 4, 25, 16, 0, 0) Minute)
                  [ "4/25 at 4:00pm"
@@ -844,6 +845,8 @@ allExamples = concat
              ]
   , examples (datetimeOpenInterval After (2013, 2, 12, 14, 0, 0) Hour)
              [ "after 2 pm"
+             , "from 2 pm"
+             , "since 2pm"
              ]
   , examples (datetimeOpenInterval After (2013, 2, 17, 4, 0, 0) Hour)
              [ "after 5 days"
