@@ -27,10 +27,10 @@ context :: Context
 context = testContext {locale = makeLocale NL Nothing}
 
 corpus :: Corpus
-corpus = (context, allExamples)
+corpus = (context, testOptions, allExamples)
 
 negativeCorpus :: NegativeCorpus
-negativeCorpus = (context, examples)
+negativeCorpus = (context, testOptions, examples)
   where
     examples =
       [ "een hotel"
@@ -420,55 +420,82 @@ allExamples = concat
   , examples (datetimeInterval ((2012, 12, 21, 0, 0, 0), (2013, 3, 21, 0, 0, 0)) Day)
              [ "deze winter"
              ]
-  , examples (datetime (2013, 12, 25, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 12, 25, 0, 0, 0) Day "Kerstmis")
              [ "kerst"
              , "kerstmis"
              ]
-  , examples (datetime (2013, 12, 31, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 12, 31, 0, 0, 0) Day "Oudjaar")
              [ "oudjaar"
              , "oudejaarsavond"
              ]
-  , examples (datetime (2014, 1, 1, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2014, 1, 1, 0, 0, 0) Day "Nieuwjaarsdag")
              [ "nieuwjaarsdag"
              , "nieuwjaar"
              ]
-  , examples (datetime (2013, 2, 14, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 2, 14, 0, 0, 0) Day "Valentijnsdag")
              [ "Valentijnsdag"
              ]
-  , examples (datetime (2013, 5, 12, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 5, 12, 0, 0, 0) Day "Moederdag")
              [ "moederdag"
-             , "tweede zondag in mei"
              ]
-  , examples (datetime (2013, 6, 16, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 6, 16, 0, 0, 0) Day "Vaderdag")
              [ "vaderdag"
-             , "derde zondag in juni"
              ]
-  , examples (datetime (2017, 04, 27, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2017, 04, 27, 0, 0, 0) Day "Koningsdag")
              [ "Koningsdag 2017"
              ]
-  , examples (datetime (2013, 10, 31, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 10, 31, 0, 0, 0) Day "Halloween")
              [ "Halloween"
              ]
-  , examples (datetime (2013, 11, 1, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 11, 1, 0, 0, 0) Day "Allerheiligen")
              [ "Allerheiligen"
              ]
-  , examples (datetime (2013, 12, 5, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 12, 5, 0, 0, 0) Day "Sinterklaas")
              [ "Sinterklaas"
              , "Pakjesavond"
              , "Sinterklaasavond"
              ]
   , examples (datetimeInterval ((2013, 2, 12, 18, 0, 0), (2013, 2, 13, 0, 0, 0)) Hour)
              [ "vanavond"
+             , "deze avond"
+             , "vandaag avond"
              ]
   , examples (datetimeInterval ((2013, 2, 13, 18, 0, 0), (2013, 2, 14, 0, 0, 0)) Hour)
              [ "morgenavond"
              ]
+  , examples (datetimeInterval ((2013, 2, 11, 18, 0, 0), (2013, 2, 12, 0, 0, 0)) Hour)
+             [ "gisteravond"
+             , "gisterenavond"
+             ]
+  , examples (datetimeInterval ((2013, 2, 12, 0, 0, 0), (2013, 2, 12, 12, 0, 0)) Hour)
+             [ "vanmorgen"
+             ]
+  , examples (datetimeInterval ((2013, 2, 13, 0, 0, 0), (2013, 2, 13, 12, 0, 0)) Hour)
+             [ "morgenochtend"
+             ]
+  , examples (datetimeInterval ((2013, 2, 11, 0, 0, 0), (2013, 2, 11, 12, 0, 0)) Hour)
+             [ "gisterenochtend"
+             ]
+  , examples (datetimeInterval ((2013, 2, 13, 18, 0, 0), (2013, 2, 14, 0, 0, 0)) Hour)
+             [ "morgennacht"
+             ]
+  , examples (datetimeInterval ((2013, 2, 11, 18, 0, 0), (2013, 2, 12, 0, 0, 0)) Hour)
+             [ "gisterennacht"
+             ]
+  , examples (datetimeInterval ((2013, 2, 12, 12, 0, 0), (2013, 2, 12, 18, 0, 0)) Hour)
+             [ "vanmiddag"
+             , "deze namiddag"
+             , "vandaag namiddag"
+             ]
   , examples (datetimeInterval ((2013, 2, 13, 12, 0, 0), (2013, 2, 13, 18, 0, 0)) Hour)
              [ "morgenmiddag"
              , "morgen 's middags"
+             , "morgen namiddag"
              ]
-  , examples (datetimeInterval ((2013, 2, 11, 18, 0, 0), (2013, 2, 12, 0, 0, 0)) Hour)
-             [ "gisteravond"
+  , examples (datetimeInterval ((2013, 2, 11, 12, 0, 0), (2013, 2, 11, 18, 0, 0)) Hour)
+             [ "gisterenmiddag"
+             , "gistermiddag"
+             , "gisterennamiddag"
              ]
   , examples (datetimeInterval ((2013, 2, 15, 18, 0, 0), (2013, 2, 18, 0, 0, 0)) Hour)
              [ "dit weekend"
@@ -574,6 +601,7 @@ allExamples = concat
              ]
   , examples (datetime (2013, 2, 14, 6, 0, 0) Minute)
              [ "donderdag 8:00 GMT"
+             , "donderdag 8:00 gmt"
              ]
   , examples (datetime (2013, 2, 12, 14, 0, 0) Hour)
              [ "vandaag om 14 uur"
@@ -593,9 +621,6 @@ allExamples = concat
              , "tot 11 am in de ochtend"
              , "op zijn laatst om 11 uur"
              , "11 uur op zijn laatst"
-             ]
-  , examples (datetimeInterval ((2013, 2, 12, 12, 0, 0), (2013, 2, 12, 18, 0, 0)) Hour)
-             [ "vanmiddag"
              ]
   , examples (datetime (2013, 2, 12, 13, 30, 0) Minute)
              [ "om 13:30 in de middag"

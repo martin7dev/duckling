@@ -101,7 +101,7 @@ ruleIntegerAndAHalf = Rule
     , regex "с половиной"
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):_) -> double $ v + 0.5
+      (Token Numeral NumeralData{TNumeral.value = v}:_) -> double $ v + 0.5
       _ -> Nothing
   }
 
@@ -134,8 +134,8 @@ ruleNumeralsPrefixWithMinus :: Rule
 ruleNumeralsPrefixWithMinus = Rule
   { name = "numbers prefix with -, minus"
   , pattern =
-    [ regex "-|минус\\s?"
-    , dimension Numeral
+    [ regex "-|минус"
+    , Predicate isPositive
     ]
   , prod = \tokens -> case tokens of
       (_:Token Numeral nd:_) -> double (TNumeral.value nd * (-1))
@@ -150,7 +150,7 @@ ruleNumeralsSuffixesKMG = Rule
     , regex "((к|м|г)|(К|М|Г))(?=[\\W\\$€]|$)"
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
+      (Token Numeral NumeralData{TNumeral.value = v}:
        Token RegexMatch (GroupMatch (match:_)):
        _) -> case Text.toLower match of
          "к" -> double $ v * 1e3
@@ -171,8 +171,8 @@ ruleInteger7 = Rule
     , numberBetween 1 10
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + v2
       _ -> Nothing
   }
@@ -185,8 +185,8 @@ ruleInteger8 = Rule
     , numberBetween 1 100
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + v2
       _ -> Nothing
   }
@@ -248,7 +248,7 @@ ruleNumeralDotNumeral = Rule
   , pattern =
     [ dimension Numeral
     , regex "точка"
-    , numberWith TNumeral.grain isNothing
+    , Predicate $ not . hasGrain
     ]
   , prod = \tokens -> case tokens of
       (Token Numeral nd1:_:Token Numeral nd2:_) ->

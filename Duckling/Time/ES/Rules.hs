@@ -276,18 +276,6 @@ ruleElDayofmonthNonOrdinal = Rule
       _ -> Nothing
   }
 
-ruleSeason4 :: Rule
-ruleSeason4 = Rule
-  { name = "season"
-  , pattern =
-    [ regex "primavera"
-    ]
-  , prod = \_ ->
-      let from = monthDay 3 20
-          to = monthDay 6 21
-      in Token Time <$> interval TTime.Open from to
-  }
-
 ruleYearLatent2 :: Rule
 ruleYearLatent2 = Rule
   { name = "year (latent)"
@@ -689,29 +677,13 @@ ruleNamedmonthnameddayPast = Rule
       _ -> Nothing
   }
 
-ruleSeason3 :: Rule
-ruleSeason3 = Rule
-  { name = "season"
-  , pattern =
-    [ regex "invierno"
-    ]
-  , prod = \_ ->
-      let from = monthDay 12 21
-          to = monthDay 3 20
-      in Token Time <$> interval TTime.Open from to
-  }
-
-ruleSeason :: Rule
-ruleSeason = Rule
-  { name = "season"
-  , pattern =
-    [ regex "verano"
-    ]
-  , prod = \_ ->
-      let from = monthDay 6 21
-          to = monthDay 9 23
-      in Token Time <$> interval TTime.Open from to
-  }
+ruleSeasons :: [Rule]
+ruleSeasons = mkRuleSeasons
+  [ ( "verano"   , "verano"   , monthDay  6 21, monthDay  9 23 )
+  , ( "otoño"    , "oto(ñ|n)o", monthDay  9 23, monthDay 12 21 )
+  , ( "invierno" , "invierno" , monthDay 12 21, monthDay  3 20 )
+  , ( "primavera", "primavera", monthDay  3 20, monthDay  6 21 )
+  ]
 
 ruleRightNow :: Rule
 ruleRightNow = Rule
@@ -845,7 +817,7 @@ ruleNthTimeDeTime2 = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:
-       Token Ordinal (OrdinalData {TOrdinal.value = v}):
+       Token Ordinal OrdinalData{TOrdinal.value = v}:
        Token Time td1:
        _:
        Token Time td2:
@@ -886,7 +858,7 @@ ruleOrdinalQuarterYear = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):_:Token Time td:_) ->
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:_:Token Time td:_) ->
         tt $ cycleNthAfter False TG.Quarter (v - 1) td
       _ -> Nothing
   }
@@ -1030,18 +1002,6 @@ ruleYesterday = Rule
     [ regex "ayer"
     ]
   , prod = \_ -> tt . cycleNth TG.Day $ - 1
-  }
-
-ruleSeason2 :: Rule
-ruleSeason2 = Rule
-  { name = "season"
-  , pattern =
-    [ regex "oto(ñ|n)o"
-    ]
-  , prod = \_ ->
-      let from = monthDay 9 23
-          to = monthDay 12 21
-      in Token Time <$> interval TTime.Open from to
   }
 
 ruleDayofweekDayofmonth :: Rule
@@ -1224,7 +1184,7 @@ ruleOrdinalQuarter = Rule
     , Predicate $ isGrain TG.Quarter
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):_) ->
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:_) ->
         tt . cycleNthAfter False TG.Quarter (v - 1)
           $ cycleNth TG.Year 0
       _ -> Nothing
@@ -1305,7 +1265,7 @@ ruleNthTimeDeTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:
        Token Time td1:
        _:
        Token Time td2:
@@ -1323,7 +1283,7 @@ ruleTimezone = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:
        Token RegexMatch (GroupMatch (tz:_)):
-       _) -> Token Time <$> inTimezone tz td
+       _) -> Token Time <$> inTimezone (Text.toUpper tz) td
       _ -> Nothing
   }
 
@@ -1389,10 +1349,6 @@ rules =
   , rulePasadosNCycle
   , ruleProximasNCycle
   , ruleRightNow
-  , ruleSeason
-  , ruleSeason2
-  , ruleSeason3
-  , ruleSeason4
   , ruleTheDayAfterTomorrow
   , ruleTheDayBeforeYesterday
   , ruleThisDayofweek
@@ -1426,3 +1382,4 @@ rules =
   ]
   ++ ruleDaysOfWeek
   ++ ruleMonths
+  ++ ruleSeasons

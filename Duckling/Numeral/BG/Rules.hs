@@ -16,7 +16,6 @@ module Duckling.Numeral.BG.Rules
 
 import Data.HashMap.Strict (HashMap)
 import Data.Maybe
-import Data.String
 import Data.Text (Text)
 import Prelude
 import qualified Data.HashMap.Strict as HashMap
@@ -116,9 +115,9 @@ ruleCompositeTens = Rule
     , numberBetween 1 10
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = tens}):
+      (Token Numeral NumeralData{TNumeral.value = tens}:
        _:
-       Token Numeral (NumeralData {TNumeral.value = units}):
+       Token Numeral NumeralData{TNumeral.value = units}:
        _) -> double $ tens + units
       _ -> Nothing
   }
@@ -152,8 +151,8 @@ ruleCompositeHundreds = Rule
     , numberBetween 1 100
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = hundreds}):
-       Token Numeral (NumeralData {TNumeral.value = tens}):
+      (Token Numeral NumeralData{TNumeral.value = hundreds}:
+       Token Numeral NumeralData{TNumeral.value = tens}:
        _) -> double $ hundreds + tens
       _ -> Nothing
   }
@@ -164,7 +163,7 @@ ruleDotSpelledOut = Rule
   , pattern =
     [ dimension Numeral
     , regex "цяло и"
-    , numberWith TNumeral.grain isNothing
+    , Predicate $ not . hasGrain
     ]
   , prod = \tokens -> case tokens of
       (Token Numeral nd1:_:Token Numeral nd2:_) ->

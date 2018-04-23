@@ -34,12 +34,14 @@ import qualified Duckling.Numeral.KA.Tests as KA
 import qualified Duckling.Numeral.KO.Tests as KO
 import qualified Duckling.Numeral.MY.Tests as MY
 import qualified Duckling.Numeral.NB.Tests as NB
+import qualified Duckling.Numeral.NE.Tests as NE
 import qualified Duckling.Numeral.NL.Tests as NL
 import qualified Duckling.Numeral.PL.Tests as PL
 import qualified Duckling.Numeral.PT.Tests as PT
 import qualified Duckling.Numeral.RO.Tests as RO
 import qualified Duckling.Numeral.RU.Tests as RU
 import qualified Duckling.Numeral.SV.Tests as SV
+import qualified Duckling.Numeral.TA.Tests as TA
 import qualified Duckling.Numeral.TR.Tests as TR
 import qualified Duckling.Numeral.UK.Tests as UK
 import qualified Duckling.Numeral.VI.Tests as VI
@@ -69,12 +71,14 @@ tests = testGroup "Numeral Tests"
   , KO.tests
   , MY.tests
   , NB.tests
+  , NE.tests
   , NL.tests
   , PL.tests
   , PT.tests
   , RO.tests
   , RU.tests
   , SV.tests
+  , TA.tests
   , TR.tests
   , UK.tests
   , VI.tests

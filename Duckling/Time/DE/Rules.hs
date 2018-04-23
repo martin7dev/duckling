@@ -80,29 +80,34 @@ ruleSeasons = mkRuleSeasons
 
 ruleHolidays :: [Rule]
 ruleHolidays = mkRuleHolidays
-  [ ( "new year's day"                    , monthDay  1  1, "neujahr(s?tag)?" )
-  , ( "valentine's day"                   , monthDay  2 14, "valentin'?stag" )
-  , ( "Schweizer Bundesfeiertag"          , monthDay  8  1,
-        "schweiz(er)? (bundes)?feiertag|bundes feiertag" )
-  , ( "Tag der Deutschen Einheit"         , monthDay 10  3,
-        "tag (der)? deutsc?hen? einheit" )
-  , ( "Oesterreichischer Nationalfeiertag", monthDay 10 26,
-        "((ö)sterreichischer?)? nationalfeiertag|national feiertag" )
-  , ( "halloween day"                     , monthDay 10 31, "hall?owe?en?" )
-  , ( "Allerheiligen"                     , monthDay 11  1,
-        "allerheiligen?|aller heiligen?" )
-  , ( "Nikolaus"                          , monthDay 12  6,
-        "nikolaus(tag)?|nikolaus tag|nikolo" )
-  , ( "christmas eve"                     , monthDay 12 24,
-        "heilig(er)? abend" )
-  , ( "christmas"                         , monthDay 12 25,
-        "weih?nacht(en|stag)?" )
-  , ( "new year's eve"                    , monthDay 12 31,
-        "silvester" )
-  , ( "Mother's Day"                      , nthDOWOfMonth 2 7 5,
-        "mutt?ertag|mutt?er (tag)?" )
-  , ( "Father's Day"                      , nthDOWOfMonth 3 7 6,
-        "vatt?er( ?tag)?" )
+  [ ( "Neujahr"                           , "neujahr(s?tag)?"
+    , monthDay  1  1 )
+  , ( "Valentinstag"                      , "valentin'?stag"
+    , monthDay  2 14 )
+  , ( "Schweizer Bundesfeiertag"
+    , "schweiz(er)? (bundes)?feiertag|bundes feiertag"
+    , monthDay  8  1 )
+  , ( "Tag der Deutschen Einheit"         , "tag (der)? deutsc?hen? einheit"
+    , monthDay 10  3 )
+  , ( "Oesterreichischer Nationalfeiertag"
+    , "((ö)sterreichischer?)? nationalfeiertag|national feiertag"
+    , monthDay 10 26 )
+  , ( "Halloween"                         , "hall?owe?en?"
+    , monthDay 10 31 )
+  , ( "Allerheiligen"                     , "allerheiligen?|aller heiligen?"
+    , monthDay 11  1 )
+  , ( "Nikolaus"                          , "nikolaus(tag)?|nikolaus tag|nikolo"
+    , monthDay 12  6 )
+  , ( "Heiligabend"                       , "heilig(er)? abend"
+    , monthDay 12 24 )
+  , ( "Weihnachten"                       , "weih?nacht(en|stag)?"
+    , monthDay 12 25 )
+  , ( "Silvester"                         , "silvester"
+    , monthDay 12 31 )
+  , ( "Muttertag"                      , "mutt?ertag|mutt?er (tag)?"
+    , nthDOWOfMonth 2 7 5 )
+  , ( "Vatertag"                      , "vatt?er( ?tag)?"
+    , nthDOWOfMonth 3 7 6 )
   ]
 
 ruleRelativeMinutesTotillbeforeIntegerHourofday :: Rule
@@ -177,7 +182,7 @@ ruleNthTimeOfTime2 = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:
-       Token Ordinal (OrdinalData {TOrdinal.value = v}):
+       Token Ordinal OrdinalData{TOrdinal.value = v}:
        Token Time td1:
        _:
        Token Time td2:
@@ -190,7 +195,7 @@ ruleLastTime = Rule
   { name = "last <time>"
   , pattern =
     [ regex "letzten?|letztes"
-    , dimension Time
+    , Predicate isOkWithThisNext
     ]
   , prod = \tokens -> case tokens of
       (_:Token Time td:_) ->
@@ -711,7 +716,7 @@ ruleNthTimeAfterTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:
        Token Time td1:
        _:
        Token Time td2:
@@ -971,7 +976,7 @@ ruleNthTimeOfTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:
        Token Time td1:
        _:
        Token Time td2:
@@ -998,7 +1003,7 @@ ruleWeekend = Rule
   , pattern =
     [ regex "wochen ?ende?"
     ]
-  , prod = \_ -> tt weekend
+  , prod = \_ -> tt $ mkOkForThisNext weekend
   }
 
 ruleNthTimeAfterTime2 :: Rule
@@ -1013,7 +1018,7 @@ ruleNthTimeAfterTime2 = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:
-       Token Ordinal (OrdinalData {TOrdinal.value = v}):
+       Token Ordinal OrdinalData{TOrdinal.value = v}:
        Token Time td1:
        _:
        Token Time td2:
@@ -1026,7 +1031,7 @@ ruleNextTime = Rule
   { name = "next <time>"
   , pattern =
     [ regex "(n(ä)chste|kommende)[ns]?"
-    , Predicate isNotLatent
+    , Predicate $ and . sequence [isNotLatent, isOkWithThisNext]
     ]
   , prod = \tokens -> case tokens of
       (_:Token Time td:_) ->
@@ -1165,7 +1170,7 @@ ruleThisTime = Rule
   { name = "this <time>"
   , pattern =
     [ regex "diese(n|r|s)?|(im )?laufenden"
-    , dimension Time
+    , Predicate isOkWithThisNext
     ]
   , prod = \tokens -> case tokens of
       (_:Token Time td:_) ->
@@ -1281,7 +1286,7 @@ ruleDayofmonthOrdinal = Rule
     [ Predicate isDOMOrdinal
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):_) ->
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:_) ->
         tt $ dayOfMonth v
       _ -> Nothing
   }
@@ -1513,7 +1518,7 @@ ruleOrdinalQuarter = Rule
     , Predicate $ isGrain TG.Quarter
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):_) -> tt .
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:_) -> tt .
         cycleNthAfter False TG.Quarter (v - 1) $ cycleNth TG.Year 0
       _ -> Nothing
   }
@@ -1526,7 +1531,7 @@ ruleTheDayofmonthOrdinal = Rule
     , Predicate isDOMOrdinal
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Ordinal (OrdinalData {TOrdinal.value = v}):_) ->
+      (_:Token Ordinal OrdinalData{TOrdinal.value = v}:_) ->
         tt $ dayOfMonth v
       _ -> Nothing
   }
@@ -1616,7 +1621,7 @@ ruleTimezone = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:
        Token RegexMatch (GroupMatch (tz:_)):
-       _) -> Token Time <$> inTimezone tz td
+       _) -> Token Time <$> inTimezone (Text.toUpper tz) td
       _ -> Nothing
   }
 

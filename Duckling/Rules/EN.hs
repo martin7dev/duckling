@@ -7,7 +7,7 @@
 
 
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
+
 
 module Duckling.Rules.EN
   ( defaultRules
@@ -45,13 +45,8 @@ import qualified Duckling.TimeGrain.EN.Rules as TimeGrain
 import qualified Duckling.Volume.EN.Rules as Volume
 
 defaultRules :: Some Dimension -> [Rule]
-defaultRules dim@(This Time) =
-  [ TimeUS.ruleMMDD
-  , TimeUS.ruleMMDDYYYY
-  , TimeUS.ruleMMDDYYYYDot
-  , TimeUS.ruleThanksgiving
-  ] ++ langRules dim
-defaultRules dim = langRules dim
+defaultRules dim@(This Time) = TimeUS.rulesBackwardCompatible ++ langRules dim
+defaultRules dim             = langRules dim
 
 localeRules :: Region -> Some Dimension -> [Rule]
 localeRules AU (This Time) = TimeAU.rules
@@ -66,7 +61,8 @@ localeRules PH (This Time) = TimePH.rules
 localeRules TT (This Time) = TimeTT.rules
 localeRules US (This Time) = TimeUS.rules
 localeRules ZA (This Time) = TimeZA.rules
-localeRules _ _            = []
+localeRules region (This (CustomDimension dim)) = dimLocaleRules region dim
+localeRules _ _ = []
 
 langRules :: Some Dimension -> [Rule]
 langRules (This AmountOfMoney) = AmountOfMoney.rules
@@ -83,3 +79,4 @@ langRules (This Time) = Time.rules
 langRules (This TimeGrain) = TimeGrain.rules
 langRules (This Url) = []
 langRules (This Volume) = Volume.rules
+langRules (This (CustomDimension dim)) = dimLangRules EN dim

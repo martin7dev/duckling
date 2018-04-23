@@ -7,7 +7,7 @@
 
 
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
+
 
 module Duckling.Temperature.Helpers
   ( isLatent
@@ -20,13 +20,13 @@ import Prelude
 import Duckling.Dimensions.Types
 import qualified Duckling.Temperature.Types as TTemperature
 import Duckling.Temperature.Types (TemperatureData(..))
-import Duckling.Types
+import Duckling.Types hiding (isLatent)
 
 -- -----------------------------------------------------------------
 -- Patterns
 
 isLatent :: Predicate
-isLatent (Token Temperature (TemperatureData {TTemperature.unit = Nothing})) =
+isLatent (Token Temperature TemperatureData{TTemperature.unit = Nothing}) =
   True
 isLatent _ = False
 

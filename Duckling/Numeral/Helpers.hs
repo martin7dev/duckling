@@ -11,10 +11,14 @@
 
 module Duckling.Numeral.Helpers
   ( decimalsToDouble
+  , diffIntegerDigits
   , double
   , integer
   , multiply
+  , isMultipliable
   , isNatural
+  , isPositive
+  , hasGrain
   , divide
   , notOkForAnyTime
   , numberBetween
@@ -77,6 +81,18 @@ decimalsToDouble x =
       [] -> 0
       (multiplier : _) -> x / multiplier
 
+-- diffIntegerDigits a b = # of digits in a - # of digits in b
+-- ignores the nondecimal components
+diffIntegerDigits :: Double -> Double -> Int
+diffIntegerDigits a b = digitsOf a - digitsOf b
+  where
+    digitsOf :: Double -> Int
+    digitsOf = digitsOfInt . floor . abs
+
+    digitsOfInt :: Int -> Int
+    digitsOfInt 0 = 0
+    digitsOfInt a = 1 + digitsOfInt (a `div` 10)
+
 -- -----------------------------------------------------------------
 -- Patterns
 
@@ -97,6 +113,18 @@ isNatural :: Predicate
 isNatural (Token Numeral NumeralData {value = v}) =
   isInteger v && v > 0
 isNatural _ = False
+
+isPositive :: Predicate
+isPositive (Token Numeral NumeralData{value = v}) = v >= 0
+isPositive _ = False
+
+isMultipliable :: Predicate
+isMultipliable (Token Numeral nd) = multipliable nd
+isMultipliable _ = False
+
+hasGrain :: Predicate
+hasGrain (Token Numeral NumeralData {grain = Just g}) = g > 1
+hasGrain _ = False
 
 oneOf :: [Double] -> PatternItem
 oneOf vs = Predicate $ \x ->
@@ -135,8 +163,8 @@ integer = double . fromIntegral
 
 multiply :: Token -> Token -> Maybe Token
 multiply
-  (Token Numeral (NumeralData {value = v1}))
-  (Token Numeral (NumeralData {value = v2, grain = g})) = case g of
+  (Token Numeral NumeralData{value = v1})
+  (Token Numeral NumeralData{value = v2, grain = g}) = case g of
   Nothing -> double $ v1 * v2
   Just grain | v2 > v1 -> double (v1 * v2) >>= withGrain grain
              | otherwise -> Nothing
@@ -144,8 +172,8 @@ multiply _ _ = Nothing
 
 divide :: Token -> Token -> Maybe Token
 divide
-  (Token Numeral (NumeralData {value = v1}))
-  (Token Numeral (NumeralData {value = v2})) = case v1 / v2 of
+  (Token Numeral NumeralData{value = v1})
+  (Token Numeral NumeralData{value = v2}) = case v1 / v2 of
     x | isInfinite x || isNaN x -> Nothing
     x -> double x
 divide _ _ = Nothing

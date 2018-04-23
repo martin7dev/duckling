@@ -24,6 +24,7 @@ import qualified Data.Text as Text
 import Duckling.AmountOfMoney.Helpers
 import Duckling.AmountOfMoney.Types (Currency(..), AmountOfMoneyData (..))
 import Duckling.Dimensions.Types
+import Duckling.Numeral.Helpers (isPositive)
 import Duckling.Numeral.Types (NumeralData (..))
 import Duckling.Regex.Types
 import Duckling.Types
@@ -39,6 +40,9 @@ currencies = HashMap.fromList
   , ("byn", BYN)
   , ("¢", Cent)
   , ("c", Cent)
+  , ("cny", CNY)
+  , ("rmb", CNY)
+  , ("yuan", CNY)
   , ("$", Dollar)
   , ("dinar", Dinar)
   , ("dinars", Dinar)
@@ -102,7 +106,7 @@ ruleCurrencies :: Rule
 ruleCurrencies = Rule
   { name = "currencies"
   , pattern =
-    [ regex "(aed|aud|bgn|brl|byn|¢|c|\\$|dinars?|dollars?|egp|(e|€)uro?s?|€|gbp|hrk|idr|ils|inr|iqd|jod|¥|jpy|krw|kwd|lbp|mad|myr|rm|nok|£|pta?s?|qar|₽|rs\\.?|riy?als?|ron|rub|rupees?|sar|sek|sgb|shekels?|us(d|\\$)|vnd|yen)"
+    [ regex "(aed|aud|bgn|brl|byn|¢|c|cny|\\$|dinars?|dollars?|egp|(e|€)uro?s?|€|gbp|hrk|idr|ils|inr|iqd|jod|¥|jpy|krw|kwd|lbp|mad|myr|rm|nok|£|pta?s?|qar|₽|rs\\.?|riy?als?|ron|rub|rupees?|sar|sek|sgb|shekels?|us(d|\\$)|vnd|yen|yuan)"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) -> do
@@ -115,26 +119,12 @@ ruleAmountUnit :: Rule
 ruleAmountUnit = Rule
   { name = "<amount> <unit>"
   , pattern =
-    [ dimension Numeral
-    , financeWith TAmountOfMoney.value isNothing
+    [ Predicate isPositive
+    , Predicate isCurrencyOnly
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
-       Token AmountOfMoney (AmountOfMoneyData {TAmountOfMoney.currency = c}):
-       _) -> Just . Token AmountOfMoney . withValue v $ currencyOnly c
-      _ -> Nothing
-  }
-
-ruleUnitAmount :: Rule
-ruleUnitAmount = Rule
-  { name = "<unit> <amount>"
-  , pattern =
-    [ financeWith TAmountOfMoney.value isNothing
-    , dimension Numeral
-    ]
-  , prod = \tokens -> case tokens of
-      (Token AmountOfMoney (AmountOfMoneyData {TAmountOfMoney.currency = c}):
-       Token Numeral (NumeralData {TNumeral.value = v}):
+      (Token Numeral NumeralData{TNumeral.value = v}:
+       Token AmountOfMoney AmountOfMoneyData{TAmountOfMoney.currency = c}:
        _) -> Just . Token AmountOfMoney . withValue v $ currencyOnly c
       _ -> Nothing
   }
@@ -143,5 +133,4 @@ rules :: [Rule]
 rules =
   [ ruleAmountUnit
   , ruleCurrencies
-  , ruleUnitAmount
   ]

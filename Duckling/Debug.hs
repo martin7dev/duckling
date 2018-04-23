@@ -13,7 +13,7 @@
 module Duckling.Debug
   ( allParses
   , debug
-  , debugContext
+  , debugCustom
   , fullParses
   , ptree
   ) where
@@ -38,42 +38,43 @@ import Duckling.Types
 -- API
 
 debug :: Locale -> Text -> [Some Dimension] -> IO [Entity]
-debug locale = debugContext testContext {locale = locale}
+debug locale = debugCustom testContext {locale = locale} testOptions
 
 allParses :: Locale -> Text -> [Some Dimension] -> IO [Entity]
 allParses l sentence targets = debugTokens sentence $ parses l sentence targets
 
 fullParses :: Locale -> Text -> [Some Dimension] -> IO [Entity]
 fullParses l sentence targets = debugTokens sentence .
-  filter (\(Resolved {range = Range start end}) -> start == 0 && end == n) $
+  filter (\Resolved{range = Range start end} -> start == 0 && end == n) $
   parses l sentence targets
   where
     n = Text.length sentence
 
-ptree :: Text -> ResolvedToken -> IO ()
-ptree sentence Resolved {node} = pnode sentence 0 node
+debugCustom :: Context -> Options -> Text -> [Some Dimension] -> IO [Entity]
+debugCustom context options sentence targets = debugTokens sentence .
+  analyze sentence context options $ HashSet.fromList targets
+
+ptree :: Text -> Entity -> IO ()
+ptree sentence Entity {enode} = pnode sentence 0 enode
 
 -- -----------------------------------------------------------------
 -- Internals
 
 parses :: Locale -> Text -> [Some Dimension] -> [ResolvedToken]
 parses l sentence targets = flip filter tokens $
-  \(Resolved {node = Node{token = (Token d _)}}) ->
+  \Resolved{node = Node{token = (Token d _)}} ->
     case targets of
       [] -> True
       _ -> elem (This d) targets
   where
-    tokens = parseAndResolve rules sentence testContext {locale = l}
+    tokens = parseAndResolve rules sentence testContext {locale = l} testOptions
     rules = rulesFor l $ HashSet.fromList targets
-
-debugContext :: Context -> Text -> [Some Dimension] -> IO [Entity]
-debugContext context sentence targets =
-  debugTokens sentence . analyze sentence context $ HashSet.fromList targets
 
 debugTokens :: Text -> [ResolvedToken] -> IO [Entity]
 debugTokens sentence tokens = do
-  mapM_ (ptree sentence) tokens
-  return $ map (formatToken sentence) tokens
+  mapM_ (ptree sentence) entities
+  return entities
+  where entities = map (formatToken sentence) tokens
 
 pnode :: Text -> Int -> Node -> IO ()
 pnode sentence depth Node {children, rule, nodeRange = Range start end} = do

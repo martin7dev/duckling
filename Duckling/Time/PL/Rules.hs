@@ -54,18 +54,18 @@ ruleDaysOfWeek = mkRuleDaysOfWeek
 
 ruleMonths :: [Rule]
 ruleMonths = mkRuleMonths
-  [ ( "January" , "styczeń|styczen|stycznia|styczniowi|styczniem|styczniu|sty(cz)?\\.?" )
-  , ( "February" , "luty|lutego|lutemu|lut?\\.?" )
-  , ( "March" , "marzec|marca|marcowi|marcem|marcu|marz?\\.?" )
-  , ( "April" , "kwiecień|kwiecien|kwietnia|kwietniowi|kwietniem|kwietniu|kwiet?\\.?" )
-  , ( "May" , "maj|maja|majowi|majem|maju" )
-  , ( "June" , "czerwiec|czerwca|czerwcowi|czerwcem|czerwcu|czer?\\.?" )
-  , ( "July" , "lipiec|lipca|lipcowi|lipcem|lipcu|lip\\.?" )
-  , ( "August" , "sierpień|sierpien|sierpnia|sierpniowi|sierpniem|sierpniu|sierp\\.?|sier\\.?|sie\\.?" )
-  , ( "September" , "wrzesień|wrzesien|września|wrzesnia|wrześniowi|wrzesniowi|wrzesień|wrzesien|wrześniem|wrzesniem|wrześniu|wrzesniu|wrz\\.?|wrze\\.?" )
+  [ ( "January" , "stycz(eń|en|nia|niowi|niem|niu)|sty(cz)?\\.?" )
+  , ( "February" , "lu(ty|tego|temu|t?\\.?)" )
+  , ( "March" , "mar(zec|ca|cowi|cem|cu|z?\\.?)" )
+  , ( "April" , "kwie(cień|cien|tnia|tniowi|tniem|tniu|t?\\.?)" )
+  , ( "May" , "maj(a|owi|em|u)?" )
+  , ( "June" , "czerw(iec|ca|cowi|cem|cu)|czer?\\.?" )
+  , ( "July" , "lip(iec|ca|cowi|cem|cu)|lip\\.?" )
+  , ( "August" , "sierp(ie(n|ń)|ni(a|owi|em|u))|sierp\\.?|sier\\.?|sie\\.?" )
+  , ( "September" , "wrze(s|ś)(ie(ń|n)|ni(a|owi|em|u))|wrz\\.?|wrze\\.?" )
   , ( "October" , "pa(z|ź)dziernik(a|owi|iem|u)?|paź\\.?|paz\\.?" )
-  , ( "November" , "listopad|listopada|listopadowi|listopadem|listopadzie|lis\\.?|list\\.?" )
-  , ( "December" , "grudzień|grudzien|grudnia|grudniowi|grudniem|grudniu|gru\\.?|grud\\.?" )
+  , ( "November" , "listopad(a|owi|em|zie)?|lis\\.?|list\\.?" )
+  , ( "December" , "grudz(ień|ien)|grudn(ia|iowi|iem|niu)|gru\\.?|grud\\.?" )
   ]
 
 ruleRelativeMinutesTotillbeforeIntegerHourofday :: Rule
@@ -305,7 +305,7 @@ ruleOrdinalAsHour = Rule
     [ Predicate $ isOrdinalBetween 1 24
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):_) ->
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:_) ->
         tt . mkLatent $ hour True v
       _ -> Nothing
   }
@@ -1268,7 +1268,7 @@ ruleDayofmonthOrdinal = Rule
     [ Predicate isDOMOrdinal
     ]
   , prod = \tokens -> case tokens of
-      (Token Ordinal (OrdinalData {TOrdinal.value = v}):_) ->
+      (Token Ordinal OrdinalData{TOrdinal.value = v}:_) ->
         tt . mkLatent $ dayOfMonth v
       _ -> Nothing
   }
@@ -1643,7 +1643,7 @@ ruleTimezone = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:
        Token RegexMatch (GroupMatch (tz:_)):
-       _) -> Token Time <$> inTimezone tz td
+       _) -> Token Time <$> inTimezone (Text.toUpper tz) td
       _ -> Nothing
   }
 

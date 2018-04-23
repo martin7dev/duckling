@@ -17,7 +17,7 @@ module Duckling.Time.AR.Rules
 import Data.Maybe
 import Data.Text (Text)
 import Prelude
-import Data.HashMap.Strict ( HashMap)
+import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text
 
@@ -25,7 +25,6 @@ import Duckling.Dimensions.Types
 import Duckling.Duration.Helpers (duration)
 import Duckling.Numeral.Helpers (parseInt)
 import Duckling.Numeral.Types (NumeralData (..))
-import Duckling.Ordinal.Types (OrdinalData (..))
 import Duckling.Regex.Types
 import Duckling.Time.Helpers
 import Duckling.Time.Types (TimeData (..))
@@ -529,7 +528,7 @@ ruleHODAndInteger = Rule
     , Predicate $ isIntegerBetween 0 60
     ]
   , prod = \tokens -> case tokens of
-      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:_:Token Numeral (NumeralData {TNumeral.value = v}):_) ->
+      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:_:Token Numeral NumeralData{TNumeral.value = v}:_) ->
         tt $ hourMinute is12H hours (floor v)
       _ -> Nothing
   }
@@ -544,7 +543,7 @@ ruleHODAndIntegerMinutes = Rule
     , regex "دقيق[ةه]|دقا[ئي]ق"
     ]
   , prod = \tokens -> case tokens of
-      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:_:Token Numeral (NumeralData {TNumeral.value = v}):_) ->
+      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:_:Token Numeral NumeralData{TNumeral.value = v}:_) ->
         tt $ hourMinute is12H hours (floor v)
       _ -> Nothing
   }
@@ -1391,7 +1390,7 @@ usHolidays =
   , ( "Christmas Eve"   , "(ليل[ةه] )((ال)?كري?سماس)"                    , 12, 24 )
   , ( "New Year's Eve"  , "(ليل[ةه] )(ر[اأ]س السن[ةه])"                  , 12, 31 )
   , ( "New Year's Day"  , "(يوم |عطل[ةه] )?(ر[اأ]س السن[ةه])"            , 1 , 1  )
-  , ( "Valentine's Day" , "(عيد |يوم |عطل[ةه] )?((ال)?حب|(ال)?فالنتا?ين)", 2 , 14 )
+  , ( "Valentine's Day" , "(عيد|يوم|عطل[ةه])((ال)?حب|(ال)?فالنتا?ين)"    , 2 , 14 )
   , ( "Halloween"       , "(عيد |يوم |عطل[ةه] )?((ال)?هالوي?ين)"         , 10, 31 )
   ]
 
@@ -1652,7 +1651,7 @@ ruleInNumeral = Rule
     , Predicate $ isIntegerBetween 0 60
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Numeral (NumeralData {TNumeral.value = v}):_) ->
+      (_:Token Numeral NumeralData{TNumeral.value = v}:_) ->
         tt . inDuration . duration TG.Minute $ floor v
       _ -> Nothing
   }
@@ -1714,7 +1713,7 @@ ruleTimezone = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:
        Token RegexMatch (GroupMatch (_:tz:_)):
-       _) -> Token Time <$> inTimezone tz td
+       _) -> Token Time <$> inTimezone (Text.toUpper tz) td
       _ -> Nothing
   }
 

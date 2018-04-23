@@ -21,10 +21,10 @@ import Duckling.Testing.Types
 import Duckling.TimeGrain.Types (Grain(..))
 
 corpus :: Corpus
-corpus = (testContext, allExamples)
+corpus = (testContext, testOptions, allExamples)
 
 negativeCorpus :: NegativeCorpus
-negativeCorpus = (testContext, examples)
+negativeCorpus = (testContext, testOptions, examples)
   where
     examples =
       [ "for months"
@@ -61,5 +61,12 @@ allExamples = concat
              ]
   , examples (DurationData 2 Year)
              [ "2 years"
+             ]
+  , examples (DurationData 27 Month)
+             [ "2 years and 3 months"
+             , "2 years, 3 months"
+             ]
+  , examples (DurationData 31719604 Second)
+             [ "1 year, 2 days, 3 hours and 4 seconds"
              ]
   ]

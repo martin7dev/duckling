@@ -38,12 +38,14 @@ import qualified Duckling.Ranking.Classifiers.KA_XX as KA_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.KO_XX as KO_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.MY_XX as MY_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.NB_XX as NB_XXClassifiers
+import qualified Duckling.Ranking.Classifiers.NE_XX as NE_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.NL_XX as NL_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.PL_XX as PL_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.PT_XX as PT_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.RO_XX as RO_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.RU_XX as RU_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.SV_XX as SV_XXClassifiers
+import qualified Duckling.Ranking.Classifiers.TA_XX as TA_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.TR_XX as TR_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.UK_XX as UK_XXClassifiers
 import qualified Duckling.Ranking.Classifiers.VI_XX as VI_XXClassifiers
@@ -74,12 +76,14 @@ classifiers (Locale KA _) = KA_XXClassifiers.classifiers
 classifiers (Locale KO _) = KO_XXClassifiers.classifiers
 classifiers (Locale MY _) = MY_XXClassifiers.classifiers
 classifiers (Locale NB _) = NB_XXClassifiers.classifiers
+classifiers (Locale NE _) = NE_XXClassifiers.classifiers
 classifiers (Locale NL _) = NL_XXClassifiers.classifiers
 classifiers (Locale PL _) = PL_XXClassifiers.classifiers
 classifiers (Locale PT _) = PT_XXClassifiers.classifiers
 classifiers (Locale RO _) = RO_XXClassifiers.classifiers
 classifiers (Locale RU _) = RU_XXClassifiers.classifiers
 classifiers (Locale SV _) = SV_XXClassifiers.classifiers
+classifiers (Locale TA _) = TA_XXClassifiers.classifiers
 classifiers (Locale TR _) = TR_XXClassifiers.classifiers
 classifiers (Locale UK _) = UK_XXClassifiers.classifiers
 classifiers (Locale VI _) = VI_XXClassifiers.classifiers

@@ -9,16 +9,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Ordinal.EN.Corpus
-  ( corpus ) where
+  ( corpus
+  ) where
 
-import Prelude
 import Data.String
+import Prelude
 
 import Duckling.Ordinal.Types
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext, allExamples)
+corpus = (testContext, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -44,19 +45,31 @@ allExamples = concat
              ]
   , examples (OrdinalData 25)
              [ "twenty-fifth"
+             , "twenty—fifth"
+             , "twenty fifth"
+             , "twentyfifth"
              , "25th"
              ]
   , examples (OrdinalData 31)
              [ "thirty-first"
+             , "thirty—first"
+             , "thirty first"
+             , "thirtyfirst"
              , "31st"
              ]
   , examples (OrdinalData 42)
              [ "forty-second"
+             , "forty—second"
+             , "forty second"
+             , "fortysecond"
              , "42nd"
              ]
-  , examples (OrdinalData 77)
-            [ "seventy-seventh"
-            , "77th"
+  , examples (OrdinalData 73)
+            [ "seventy-third"
+            , "seventy—third"
+            , "seventy third"
+            , "seventythird"
+            , "73rd"
             ]
   , examples (OrdinalData 90)
             [ "ninetieth"

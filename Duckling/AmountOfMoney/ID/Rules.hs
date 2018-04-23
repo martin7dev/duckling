@@ -7,22 +7,39 @@
 
 
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.AmountOfMoney.ID.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
 import Data.Maybe
-import Prelude
 import Data.String
+import Prelude
 
 import Duckling.AmountOfMoney.Helpers
-import Duckling.AmountOfMoney.Types (Currency(..))
-import qualified Duckling.AmountOfMoney.Types as TAmountOfMoney
+import Duckling.AmountOfMoney.Types (Currency(..), AmountOfMoneyData(..))
 import Duckling.Dimensions.Types
+import Duckling.Numeral.Helpers (isNatural, isPositive)
 import Duckling.Numeral.Types (NumeralData (..))
-import qualified Duckling.Numeral.Types as TNumeral
 import Duckling.Types
+import qualified Duckling.AmountOfMoney.Types as TAmountOfMoney
+import qualified Duckling.Numeral.Types as TNumeral
+
+ruleUnitAmount :: Rule
+ruleUnitAmount = Rule
+  { name = "<unit> <amount>"
+  , pattern =
+    [ Predicate isCurrencyOnly
+    , Predicate isPositive
+    ]
+  , prod = \case
+      (Token AmountOfMoney AmountOfMoneyData{TAmountOfMoney.currency = c}:
+       Token Numeral NumeralData{TNumeral.value = v}:
+       _) -> Just . Token AmountOfMoney . withValue v $ currencyOnly c
+      _ -> Nothing
+  }
 
 ruleDollar :: Rule
 ruleDollar = Rule
@@ -55,12 +72,12 @@ ruleIntersect :: Rule
 ruleIntersect = Rule
   { name = "intersect"
   , pattern =
-    [ financeWith TAmountOfMoney.value isJust
-    , dimension Numeral
+    [ Predicate isWithoutCents
+    , Predicate isNatural
     ]
   , prod = \tokens -> case tokens of
       (Token AmountOfMoney fd:
-       Token Numeral (NumeralData {TNumeral.value = c}):
+       Token Numeral NumeralData{TNumeral.value = c}:
        _) -> Just . Token AmountOfMoney $ withCents c fd
       _ -> Nothing
   }
@@ -76,7 +93,8 @@ ruleJpy = Rule
 
 rules :: [Rule]
 rules =
-  [ ruleDollar
+  [ ruleUnitAmount
+  , ruleDollar
   , ruleIdr
   , ruleIntersect
   , ruleJpy

@@ -16,15 +16,16 @@
 
 module Duckling.Time.Types where
 
-import Control.Applicative ((<|>))
 import Control.Arrow ((***))
 import Control.DeepSeq
 import Control.Monad (join)
 import Data.Aeson
+import Data.Foldable (find)
 import Data.Hashable
 import Data.Maybe
 import Data.Monoid
 import Data.Text (Text)
+import Data.Tuple.Extra (both)
 import GHC.Generics
 import Prelude
 import TextShow (showt)
@@ -65,18 +66,19 @@ data TimeData = TimeData
   , form :: Maybe Form
   , direction :: Maybe IntervalDirection
   , okForThisNext :: Bool -- allows specific this+Time
+  , holiday :: Maybe Text
   }
 
 instance Eq TimeData where
-  (==) (TimeData _ l1 g1 n1 f1 d1 _) (TimeData _ l2 g2 n2 f2 d2 _) =
+  (==) (TimeData _ l1 g1 n1 f1 d1 _ _) (TimeData _ l2 g2 n2 f2 d2 _ _) =
     l1 == l2 && g1 == g2 && n1 == n2 && f1 == f2 && d1 == d2
 
 instance Hashable TimeData where
-  hashWithSalt s (TimeData _ latent grain imm form dir _) = hashWithSalt s
+  hashWithSalt s (TimeData _ latent grain imm form dir _ _) = hashWithSalt s
     (0::Int, (latent, grain, imm, form, dir))
 
 instance Ord TimeData where
-  compare (TimeData _ l1 g1 n1 f1 d1 _) (TimeData _ l2 g2 n2 f2 d2 _) =
+  compare (TimeData _ l1 g1 n1 f1 d1 _ _) (TimeData _ l2 g2 n2 f2 d2 _ _) =
     case compare g1 g2 of
       EQ -> case compare f1 f2 of
         EQ -> case compare l1 l2 of
@@ -88,12 +90,13 @@ instance Ord TimeData where
       z -> z
 
 instance Show TimeData where
-  show (TimeData _ latent grain _ form dir _) =
+  show (TimeData _ latent grain _ form dir _ holiday) =
     "TimeData{" ++
     "latent=" ++ show latent ++
     ", grain=" ++ show grain ++
     ", form=" ++ show form ++
     ", direction=" ++ show dir ++
+    ", holiday=" ++ show holiday ++
     "}"
 
 instance NFData TimeData where
@@ -101,8 +104,8 @@ instance NFData TimeData where
 
 instance Resolve TimeData where
   type ResolvedValue TimeData = TimeValue
-  resolve _ TimeData {latent = True} = Nothing
-  resolve context TimeData {timePred, notImmediate, direction} = do
+  resolve _ Options {withLatent = False} TimeData {latent = True} = Nothing
+  resolve context _ TimeData {timePred, latent, notImmediate, direction, holiday} = do
     value <- case future of
       [] -> listToMaybe past
       ahead:nextAhead:_
@@ -110,10 +113,10 @@ instance Resolve TimeData where
       ahead:_ -> Just ahead
     values <- Just . take 3 $ if List.null future then past else future
     Just $ case direction of
-      Nothing -> TimeValue (timeValue tzSeries value) $
-        map (timeValue tzSeries) values
-      Just d -> TimeValue (openInterval tzSeries d value) $
-        map (openInterval tzSeries d) values
+      Nothing -> (TimeValue (timeValue tzSeries value)
+        (map (timeValue tzSeries) values) holiday, latent)
+      Just d -> (TimeValue (openInterval tzSeries d value)
+        (map (openInterval tzSeries d) values) holiday, latent)
     where
       DucklingTime (Series.ZoneSeriesTime utcTime tzSeries) = referenceTime context
       refTime = TimeObject
@@ -138,6 +141,7 @@ timedata' = TimeData
   , form = Nothing
   , direction = Nothing
   , okForThisNext = False
+  , holiday = Nothing
   }
 
 data TimeContext = TimeContext
@@ -164,7 +168,7 @@ data SingleTimeValue
   | OpenIntervalValue (InstantValue, IntervalDirection)
   deriving (Show, Eq)
 
-data TimeValue = TimeValue SingleTimeValue [SingleTimeValue]
+data TimeValue = TimeValue SingleTimeValue [SingleTimeValue] (Maybe Text)
   deriving (Show, Eq)
 
 instance ToJSON InstantValue where
@@ -192,15 +196,26 @@ instance ToJSON SingleTimeValue where
     ]
 
 instance ToJSON TimeValue where
-  toJSON (TimeValue value values) = case toJSON value of
-    Object o -> Object $ H.insert "values" (toJSON values) o
+  toJSON (TimeValue value values holiday) = case toJSON value of
+    Object o ->
+      Object $ insertHoliday holiday $ H.insert "values" (toJSON values) o
     _ -> Object H.empty
+    where
+      insertHoliday :: Maybe Text -> Object -> Object
+      insertHoliday Nothing obj = obj
+      insertHoliday (Just h) obj = H.insert "holidayBeta" (toJSON h) obj
 
 -- | Return a tuple of (past, future) elements
 type SeriesPredicate = TimeObject -> TimeContext -> ([TimeObject], [TimeObject])
 
 data AMPM = AM | PM
   deriving (Eq, Show)
+
+data SeasonName = Spring | Summer | Fall | Winter deriving (Enum,Eq,Ord,Show)
+
+-- | Regular seasons of the Northern Hemisphere.
+data Season = Season { startYear :: Integer, seasonName :: SeasonName }
+  deriving (Eq,Ord,Show)
 
 newtype NoShow a = NoShow a
 
@@ -337,9 +352,78 @@ containsTimeIntervalsPredicate _ = False
   -- SeriesPredicate might contain one, but we'll underapproximate for
   -- now
 
+-- Computes the difference of the start time of two `TimeObject`s.
+diffStartTime :: TimeObject -> TimeObject -> Time.NominalDiffTime
+diffStartTime TimeObject{start = x} TimeObject{start = y} =
+  abs (Time.diffUTCTime x y)
+
 isEmptyPredicate :: Predicate -> Bool
 isEmptyPredicate EmptyPredicate{} = True
 isEmptyPredicate _ = False
+
+seasonStart :: Season -> Time.Day
+seasonStart (Season year Spring) = Time.fromGregorian year 3 20
+seasonStart (Season year Summer) = Time.fromGregorian year 6 21
+seasonStart (Season year Fall) = Time.fromGregorian year 9 23
+seasonStart (Season year Winter) = Time.fromGregorian year 12 21
+
+seasonEnd :: Season -> Time.Day
+seasonEnd = Time.addDays (-1) . seasonStart . nextSeason
+
+nextSeason :: Season -> Season
+nextSeason (Season year Winter) = Season (year+1) Spring
+nextSeason (Season year x) = Season year (succ x)
+
+prevSeason :: Season -> Season
+prevSeason (Season year Spring) = Season (year-1) Winter
+prevSeason (Season year x) = Season year (pred x)
+
+seasonOf :: Time.Day -> Season
+seasonOf day = fromMaybe (Season (year-1) Winter) mbSeason
+  where
+  (year,_,_) = Time.toGregorian day
+  mbSeason = find ((<= day) . seasonStart) $
+               Season year <$> [Winter,Fall,Summer,Spring]
+
+seasonPredicate :: Predicate
+seasonPredicate = mkSeriesPredicate series
+  where
+  series t = const (past,future)
+    where
+    day = Time.utctDay (start t)
+    (past,future) = both (map toTimeObj) (toZipper day)
+    toTimeObj season = TimeObject { start = s, grain = TG.Day, end = Just e }
+      where (s,e) = both toMidnight (seasonStart season, seasonEnd season)
+    toZipper d = (before, currentAndAfter)
+      where
+      current = seasonOf d
+      currentAndAfter = iterate nextSeason current
+      before = iterate prevSeason (prevSeason current)
+
+-- Predicate for weekdays, i.e., Mon to Fri.
+weekdayPredicate :: Predicate
+weekdayPredicate = mkSeriesPredicate series
+  where
+  series t = const (past,future)
+    where
+    day = Time.utctDay (start t)
+    (_,_,dayOfWeek) = Time.toWeekDate day
+    past = toTimeObj . toMidnight . fst <$>
+      iterate prevWeekday (prevWeekday (day,dayOfWeek))
+    future = toTimeObj . toMidnight <$>
+      if dayOfWeek <= 5 then day:days else days
+        where days = fst <$> iterate nextWeekday (nextWeekday (day,dayOfWeek))
+    toTimeObj t = TimeObject { start = t, grain = TG.Day, end = Nothing }
+    nextWeekday (d,dow)
+      | dow < 5 = (Time.addDays 1 d, dow+1)
+      | otherwise = (Time.addDays (toInteger $ 8-dow) d, 1)
+    prevWeekday (d,dow)
+      | dow == 1 = (Time.addDays (-3) d, 5)
+      | dow == 7 = (Time.addDays (-2) d, 5)
+      | otherwise = (Time.addDays (-1) d, dow-1)
+
+toMidnight :: Time.Day -> Time.UTCTime
+toMidnight = flip Time.UTCTime (Time.timeOfDayToTime Time.midnight)
 
 -- Predicate runners
 

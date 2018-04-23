@@ -20,9 +20,11 @@ import Prelude
 import Duckling.Dimensions.Types
 import Duckling.Numeral.Helpers (parseInt)
 import Duckling.Regex.Types
+import Duckling.Time.Computed (easterSunday)
 import Duckling.Time.Helpers
 import Duckling.Time.Types (TimeData (..))
 import Duckling.Types
+import qualified Duckling.TimeGrain.Types as TG
 
 ruleDDMM :: Rule
 ruleDDMM = Rule
@@ -42,7 +44,7 @@ ruleDDMMYYYY :: Rule
 ruleDDMMYYYY = Rule
   { name = "dd/mm/yyyy"
   , pattern =
-    [ regex "(3[01]|[12]\\d|0?[1-9])[/-](1[0-2]|0?[1-9])[-/](\\d{2,4})"
+    [ regex "(3[01]|[12]\\d|0?[1-9])[-/\\s](1[0-2]|0?[1-9])[-/\\s](\\d{2,4})"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (dd:mm:yy:_)):_) -> do
@@ -69,20 +71,35 @@ ruleDDMMYYYYDot = Rule
       _ -> Nothing
   }
 
--- Fourth Thursday of November
-ruleThanksgiving :: Rule
-ruleThanksgiving = Rule
-  { name = "Thanksgiving Day"
-  , pattern =
-    [ regex "thanks?giving( day)?"
-    ]
-  , prod = \_ -> tt . mkOkForThisNext $ nthDOWOfMonth 4 4 11
-  }
+rulePeriodicHolidays :: [Rule]
+rulePeriodicHolidays = mkRuleHolidays
+  -- Fixed dates, year over year
+  [ ( "ANZAC Day", "anzac day", monthDay 4 25 )
+  , ( "Guy Fawkes Night", "guy fawkes night", monthDay 11 5 )
+  , ( "Waitangi Day", "waitangi day", monthDay 2 6 )
+
+  -- Fixed day/week/month, year over year
+  , ( "Administrative Professionals' Day"
+    , "(admin(istrative professionals'?)|secretaries'?) day"
+    , nthDOWOfMonth 3 3 4 )
+  , ( "Father's Day", "father'?s?'? day", nthDOWOfMonth 1 7 9 )
+  , ( "Labour Day", "labour day", nthDOWOfMonth 4 1 10 )
+  , ( "Mother's Day", "mother'?s?'? day", nthDOWOfMonth 2 7 5 )
+  , ( "Queen's birthday", "queen's birthday", nthDOWOfMonth 1 1 6 )
+  , ( "Thanksgiving Day", "thanks?giving( day)?", nthDOWOfMonth 4 4 11 )
+  ]
+
+ruleComputedHolidays :: [Rule]
+ruleComputedHolidays = mkRuleHolidays
+  [ ( "Easter Tuesday", "easter\\s+tue(sday)?"
+    , cycleNthAfter False TG.Day 2 easterSunday )
+  ]
 
 rules :: [Rule]
 rules =
   [ ruleDDMM
   , ruleDDMMYYYY
   , ruleDDMMYYYYDot
-  , ruleThanksgiving
   ]
+  ++ ruleComputedHolidays
+  ++ rulePeriodicHolidays

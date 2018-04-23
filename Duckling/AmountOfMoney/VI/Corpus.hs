@@ -21,7 +21,7 @@ import Duckling.Resolve
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {locale = makeLocale VI Nothing}, allExamples)
+corpus = (testContext {locale = makeLocale VI Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -37,12 +37,12 @@ allExamples = concat
              , "mười xu"
              ]
   , examples (simple Dollar 10000)
-             [ "$10,000"
+             [ "$10.000"
              , "10K$"
              , "$10k"
              ]
   , examples (simple USD 1.23)
-             [ "USD1.23"
+             [ "USD1,23"
              ]
   , examples (simple Dollar 2.23)
              [ "2 đô la và 23 xen"
@@ -56,7 +56,7 @@ allExamples = concat
              [ "mười đồng"
              ]
   , examples (simple VND 10000)
-             [ "10,000 đồng"
+             [ "10.000 đồng"
              , "10K đồng"
              , "10k đồng"
              ]
@@ -72,7 +72,7 @@ allExamples = concat
              , "EUR 20"
              ]
   , examples (simple EUR 29.99)
-             [ "EUR29.99"
+             [ "EUR29,99"
              ]
   , examples (simple INR 20)
              [ "Rs. 20"
@@ -94,8 +94,8 @@ allExamples = concat
              , "chín pounds"
              ]
   , examples (simple GBP 3.01)
-             [ "GBP3.01"
-             , "GBP 3.01"
+             [ "GBP3,01"
+             , "GBP 3,01"
              ]
   , examples (simple AED 1)
              [ "1 AED."

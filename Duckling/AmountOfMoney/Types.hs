@@ -41,6 +41,7 @@ data Currency
   | BGN
   | BRL
   | BYN
+  | CNY
   | EGP
   | EUR
   | GBP
@@ -82,6 +83,7 @@ instance ToJSON Currency where
   toJSON BGN     = "BGN"
   toJSON BRL     = "BRL"
   toJSON BYN     = "BYN"
+  toJSON CNY     = "CNY"
   toJSON EGP     = "EGP"
   toJSON EUR     = "EUR"
   toJSON GBP     = "GBP"
@@ -118,15 +120,19 @@ data AmountOfMoneyData = AmountOfMoneyData
 
 instance Resolve AmountOfMoneyData where
   type ResolvedValue AmountOfMoneyData = AmountOfMoneyValue
-  resolve _ AmountOfMoneyData {value = Nothing, minValue = Nothing, maxValue = Nothing} = Nothing
-  resolve _ AmountOfMoneyData {value = Just value, currency} =
-    Just $ simple currency value
-  resolve _ AmountOfMoneyData {value = Nothing, currency = c, minValue = Just from, maxValue = Just to} =
-    Just $ between c (from, to)
-  resolve _ AmountOfMoneyData {value = Nothing, currency = c, minValue = Just v, maxValue = Nothing} =
-    Just $ above c v
-  resolve _ AmountOfMoneyData {value = Nothing, currency = c, minValue = Nothing, maxValue = Just v} =
-    Just $ under c v
+  resolve _ _ AmountOfMoneyData {value = Nothing, minValue = Nothing
+                              , maxValue = Nothing} = Nothing
+  resolve _ _ AmountOfMoneyData {value = Just value, currency} =
+    Just (simple currency value, False)
+  resolve _ _ AmountOfMoneyData {value = Nothing, currency = c
+                              , minValue = Just from, maxValue = Just to} =
+    Just (between c (from, to), False)
+  resolve _ _ AmountOfMoneyData {value = Nothing, currency = c
+                              , minValue = Just v, maxValue = Nothing} =
+    Just (above c v, False)
+  resolve _ _ AmountOfMoneyData {value = Nothing, currency = c
+                              , minValue = Nothing, maxValue = Just v} =
+    Just (under c v, False)
 
 data IntervalDirection = Above | Under
   deriving (Eq, Generic, Hashable, Ord, Show, NFData)

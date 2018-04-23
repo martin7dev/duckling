@@ -45,12 +45,14 @@ import qualified Duckling.Rules.KA as KARules
 import qualified Duckling.Rules.KO as KORules
 import qualified Duckling.Rules.MY as MYRules
 import qualified Duckling.Rules.NB as NBRules
+import qualified Duckling.Rules.NE as NERules
 import qualified Duckling.Rules.NL as NLRules
 import qualified Duckling.Rules.PL as PLRules
 import qualified Duckling.Rules.PT as PTRules
 import qualified Duckling.Rules.RO as RORules
 import qualified Duckling.Rules.RU as RURules
 import qualified Duckling.Rules.SV as SVRules
+import qualified Duckling.Rules.TA as TARules
 import qualified Duckling.Rules.TR as TRRules
 import qualified Duckling.Rules.UK as UKRules
 import qualified Duckling.Rules.VI as VIRules
@@ -99,12 +101,14 @@ defaultRules KA = KARules.defaultRules
 defaultRules KO = KORules.defaultRules
 defaultRules MY = MYRules.defaultRules
 defaultRules NB = NBRules.defaultRules
+defaultRules NE = NERules.defaultRules
 defaultRules NL = NLRules.defaultRules
 defaultRules PL = PLRules.defaultRules
 defaultRules PT = PTRules.defaultRules
 defaultRules RO = RORules.defaultRules
 defaultRules RU = RURules.defaultRules
 defaultRules SV = SVRules.defaultRules
+defaultRules TA = TARules.defaultRules
 defaultRules TR = TRRules.defaultRules
 defaultRules UK = UKRules.defaultRules
 defaultRules VI = VIRules.defaultRules
@@ -133,12 +137,14 @@ localeRules KA = KARules.localeRules
 localeRules KO = KORules.localeRules
 localeRules MY = MYRules.localeRules
 localeRules NB = NBRules.localeRules
+localeRules NE = NERules.localeRules
 localeRules NL = NLRules.localeRules
 localeRules PL = PLRules.localeRules
 localeRules PT = PTRules.localeRules
 localeRules RO = RORules.localeRules
 localeRules RU = RURules.localeRules
 localeRules SV = SVRules.localeRules
+localeRules TA = TARules.localeRules
 localeRules TR = TRRules.localeRules
 localeRules UK = UKRules.localeRules
 localeRules VI = VIRules.localeRules
@@ -167,12 +173,14 @@ langRules KA = KARules.langRules
 langRules KO = KORules.langRules
 langRules MY = MYRules.langRules
 langRules NB = NBRules.langRules
+langRules NE = NERules.langRules
 langRules NL = NLRules.langRules
 langRules PL = PLRules.langRules
 langRules PT = PTRules.langRules
 langRules RO = RORules.langRules
 langRules RU = RURules.langRules
 langRules SV = SVRules.langRules
+langRules TA = TARules.langRules
 langRules TR = TRRules.langRules
 langRules UK = UKRules.langRules
 langRules VI = VIRules.langRules

@@ -8,7 +8,7 @@
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NoRebindableSyntax #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Duckling.Time.Helpers
   ( -- Patterns
@@ -22,17 +22,20 @@ module Duckling.Time.Helpers
   , hourMinute, hourMinuteSecond, inDuration, intersect, intersectDOM, interval
   , inTimezone, longWEBefore, minute, minutesAfter, minutesBefore, mkLatent
   , month, monthDay, notLatent, now, nthDOWOfMonth, partOfDay, predLastOf
-  , predNth, predNthAfter, second, timeOfDayAMPM, weekend, withDirection, year
-  , yearMonthDay, tt
+  , predNth, predNthAfter, predNthClosest, season, second, timeOfDayAMPM
+  , weekday, weekend, withDirection, year, yearMonthDay, tt, durationIntervalAgo
+  , inDurationInterval
     -- Other
-  , getIntValue
+  , getIntValue, timeComputed
   -- Rule constructors
-  , mkRuleInstants, mkRuleDaysOfWeek, mkRuleMonths, mkRuleSeasons
-  , mkRuleHolidays
+  , mkRuleInstants, mkRuleDaysOfWeek, mkRuleMonths, mkRuleMonthsWithLatent
+  , mkRuleSeasons, mkRuleHolidays, mkRuleHolidays'
   ) where
 
 import Data.Maybe
+import Data.Ord (comparing)
 import Data.Text (Text)
+import Data.Tuple.Extra (both)
 import Prelude
 import qualified Data.Time as Time
 import qualified Data.Time.Calendar.WeekDate as Time
@@ -74,8 +77,19 @@ timeNegPeriod :: DurationData -> DurationData
 timeNegPeriod (DurationData v g) = DurationData
   {TDuration.grain = g, TDuration.value = negate v}
 
+timeShiftPeriod :: Int -> DurationData -> DurationData
+timeShiftPeriod n dd@DurationData{TDuration.value = v} =
+  dd{TDuration.value = v + n}
+
 -- -----------------------------------------------------------------
 -- Time predicates
+
+timeComputed :: [TTime.TimeObject] -> TTime.Predicate
+timeComputed xs = mkSeriesPredicate series
+  where
+    series t _ = (reverse start, end)
+      where
+        (start, end) = span (flip TTime.timeBefore t) xs
 
 timeCycle :: TG.Grain -> TTime.Predicate
 timeCycle grain = mkSeriesPredicate series
@@ -176,6 +190,27 @@ takeNthAfter n notImmediate cyclicPred basePred =
            [] -> Nothing
            (nth:_) -> Just nth
 
+-- | Take the nth closest value to `basePred` among those yielded by
+-- `cyclicPred`.
+-- n = 0 is the closest value, n = 1 is the second closest value, etc.
+-- n < 0 is treated as n = 0.
+takeNthClosest :: Int -> TTime.Predicate -> TTime.Predicate -> TTime.Predicate
+takeNthClosest n cyclicPred basePred =
+  mkSeriesPredicate $! TTime.timeSeqMap False f basePred
+  where
+  f t ctx = nth (n `max` 0) past future Nothing
+    where
+    (past, future) = runPredicate cyclicPred t ctx
+    nth n pa fu res
+      | n < 0 = res
+      | otherwise = case comparing (against t) x y of
+          GT -> nth (n-1) (tailSafe pa) fu x
+          _ -> nth (n-1) pa (tailSafe fu) y
+      where (x,y) = both listToMaybe (pa,fu)
+    against t = fmap (negate . TTime.diffStartTime t)
+    tailSafe (_:xs) = xs
+    tailSafe [] = []
+
 -- | Takes the last occurrence of `cyclicPred` within `basePred`.
 takeLastOf :: TTime.Predicate -> TTime.Predicate -> TTime.Predicate
 takeLastOf cyclicPred basePred =
@@ -230,11 +265,11 @@ isGrain value (Token TimeGrain grain) = grain == value
 isGrain _ _ = False
 
 isGrainFinerThan :: TG.Grain -> Predicate
-isGrainFinerThan value (Token Time (TimeData {TTime.timeGrain = g})) = g < value
+isGrainFinerThan value (Token Time TimeData{TTime.timeGrain = g}) = g < value
 isGrainFinerThan _ _ = False
 
 isGrainOfTime :: TG.Grain -> Predicate
-isGrainOfTime value (Token Time (TimeData {TTime.timeGrain = g})) = g == value
+isGrainOfTime value (Token Time TimeData{TTime.timeGrain = g}) = g == value
 isGrainOfTime _ _ = False
 
 isADayOfWeek :: Predicate
@@ -316,21 +351,26 @@ intersect td1 td2 =
     res -> Just res
 
 intersect' :: (TimeData, TimeData) -> TimeData
-intersect' (TimeData pred1 _ g1 _ _ d1 _, TimeData pred2 _ g2 _ _ d2 _)
+intersect' (TimeData pred1 _ g1 _ _ d1 _ h1, TimeData pred2 _ g2 _ _ d2 _ h2)
   | g1 < g2 = TTime.timedata'
     { TTime.timePred = timeCompose pred1 pred2
     , TTime.timeGrain = g1
     , TTime.direction = dir
+    , TTime.holiday = hol
     }
   | otherwise = TTime.timedata'
     { TTime.timePred = timeCompose pred2 pred1
     , TTime.timeGrain = g2
     , TTime.direction = dir
+    , TTime.holiday = hol
     }
   where
     dir = case catMaybes [d1, d2] of
       [] -> Nothing
       (x:_) -> Just x
+    hol = case catMaybes [h1, h2] of
+      [] -> Nothing
+      (h:_) -> Just h
 
 now :: TimeData
 now = td {TTime.timeGrain = TG.NoGrain}
@@ -381,6 +421,20 @@ hourMinuteSecond :: Bool -> Int -> Int -> Int -> TimeData
 hourMinuteSecond is12H h m s = timeOfDay (Just h) is12H $
   intersect' (intersect' (hour is12H h, minute m), second s)
 
+season :: TimeData
+season = TTime.timedata'
+  { TTime.timePred = TTime.seasonPredicate
+  , TTime.timeGrain = TG.Day
+  }
+
+-- | Note that this function is not the counterpart of `weekend`.
+-- `weekend` returns an interval while `weekday` returns a single day.
+weekday :: TimeData
+weekday = TTime.timedata'
+  { TTime.timePred = TTime.weekdayPredicate
+  , TTime.timeGrain = TG.Day
+  }
+
 cycleN :: Bool -> TG.Grain -> Int -> TimeData
 cycleN notImmediate grain n = TTime.timedata'
   { TTime.timePred = takeN n notImmediate $ timeCycle grain
@@ -414,9 +468,12 @@ predLastOf TimeData {TTime.timePred = cyclicPred, TTime.timeGrain = g} base =
 
 -- Generalized version of cycleNth with custom predicate
 predNth :: Int -> Bool -> TimeData -> TimeData
-predNth n notImmediate TimeData {TTime.timePred = p, TTime.timeGrain = g} =
+predNth n notImmediate TimeData
+  {TTime.timePred = p, TTime.timeGrain = g, TTime.holiday = h} =
   TTime.timedata'
-    {TTime.timePred = takeNth n notImmediate p, TTime.timeGrain = g}
+    {TTime.timePred = takeNth n notImmediate p
+    , TTime.timeGrain = g
+    , TTime.holiday = h}
 
 -- Generalized version of `cycleNthAfter` with custom predicate
 predNthAfter :: Int -> TimeData -> TimeData -> TimeData
@@ -426,8 +483,19 @@ predNthAfter n TimeData {TTime.timePred = p, TTime.timeGrain = g} base =
     , TTime.timeGrain = g
     }
 
+-- This function can be used to express predicates invoving "closest",
+-- such as "the second closest Monday to Oct 5th"
+predNthClosest :: Int -> TimeData -> TimeData -> TimeData
+predNthClosest n TimeData
+  {TTime.timePred = p, TTime.timeGrain = g, TTime.holiday = h} base =
+  TTime.timedata'
+    { TTime.timePred = takeNthClosest n p $ TTime.timePred base
+    , TTime.timeGrain = g
+    , TTime.holiday = h
+    }
+
 interval' :: TTime.TimeIntervalType -> (TimeData, TimeData) -> TimeData
-interval' intervalType (TimeData p1 _ g1 _ _ _ _, TimeData p2 _ g2 _ _ _ _) =
+interval' intervalType (TimeData p1 _ g1 _ _ _ _ _, TimeData p2 _ g2 _ _ _ _ _) =
   TTime.timedata'
     { TTime.timePred = mkTimeIntervalsPredicate intervalType' p1 p2
     , TTime.timeGrain = min g1 g2
@@ -450,6 +518,9 @@ mkOkForThisNext td = td {TTime.okForThisNext = True}
 durationAgo :: DurationData -> TimeData
 durationAgo dd = inDuration $ timeNegPeriod dd
 
+durationIntervalAgo :: DurationData -> TimeData
+durationIntervalAgo dd = inDurationInterval $ timeNegPeriod dd
+
 durationAfter :: DurationData -> TimeData -> TimeData
 durationAfter dd TimeData {TTime.timePred = pred1, TTime.timeGrain = g} =
   TTime.timedata'
@@ -470,10 +541,17 @@ inDuration dd = TTime.timedata'
   where
     t = takeNth 0 False $ timeCycle TG.Second
 
+inDurationInterval :: DurationData -> TimeData
+inDurationInterval dd = interval' TTime.Open
+  (inDuration dd, inDuration $ timeShiftPeriod 1 dd)
+
 inTimezone :: Text -> TimeData -> Maybe TimeData
 inTimezone input td@TimeData {TTime.timePred = p} = do
   tz <- parseTimezone input
   Just $ td {TTime.timePred = shiftTimezone (Series.TimeZoneSeries tz []) p}
+
+withHoliday :: Text -> TimeData -> TimeData
+withHoliday n td = td {TTime.holiday = Just n}
 
 mkLatent :: TimeData -> TimeData
 mkLatent td = td {TTime.latent = True}
@@ -558,26 +636,40 @@ mkSingleRegexRule name pattern token = Rule
 mkRuleInstants :: [(Text, TG.Grain, Int, String)] -> [Rule]
 mkRuleInstants = map go
   where
-    go (name, grain, n, ptn) = mkSingleRegexRule name ptn $ tt $
+    go (name, grain, n, ptn) = mkSingleRegexRule name ptn . tt $
       cycleNth grain n
 
 mkRuleDaysOfWeek :: [(Text, String)] -> [Rule]
 mkRuleDaysOfWeek daysOfWeek = zipWith go daysOfWeek [1..7]
   where
-    go (name, ptn) i = mkSingleRegexRule name ptn $ tt $ dayOfWeek i
+    go (name, ptn) i =
+      mkSingleRegexRule name ptn . tt . mkOkForThisNext $ dayOfWeek i
 
 mkRuleMonths :: [(Text, String)] -> [Rule]
-mkRuleMonths months  = zipWith go months [1..12]
+mkRuleMonths = mkRuleMonthsWithLatent . map (uncurry (,, False))
+
+mkRuleMonthsWithLatent :: [(Text, String, Bool)] -> [Rule]
+mkRuleMonthsWithLatent months  = zipWith go months [1..12]
   where
-    go (name, ptn) i = mkSingleRegexRule name ptn $ tt $ month i
+    go (name, ptn, latent) i =
+      mkSingleRegexRule name ptn . tt . (if latent then mkLatent else id)
+      . mkOkForThisNext $ month i
 
 mkRuleSeasons :: [(Text, String, TimeData, TimeData)] -> [Rule]
 mkRuleSeasons = map go
   where
-    go (name, ptn, start, end) =
-      mkSingleRegexRule name ptn $ Token Time <$> interval TTime.Open start end
+    go (name, ptn, start, end) = mkSingleRegexRule name ptn $
+      Token Time <$> mkOkForThisNext <$> interval TTime.Open start end
 
-mkRuleHolidays :: [(Text, TimeData, String)] -> [Rule]
+mkRuleHolidays :: [(Text, String, TimeData)] -> [Rule]
 mkRuleHolidays = map go
   where
-    go (name, date, ptn) = mkSingleRegexRule name ptn $ tt date
+    go (name, ptn, td) = mkSingleRegexRule name ptn . tt
+      $ withHoliday name $ mkOkForThisNext td
+
+mkRuleHolidays' :: [(Text, String, Maybe TimeData)] -> [Rule]
+mkRuleHolidays' = map go
+  where
+    go (name, ptn, td) = mkSingleRegexRule name ptn $ do
+      td <- td
+      tt $ withHoliday name $ mkOkForThisNext td

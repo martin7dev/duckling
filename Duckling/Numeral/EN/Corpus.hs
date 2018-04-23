@@ -18,7 +18,7 @@ import Duckling.Numeral.Types
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext, allExamples)
+corpus = (testContext, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -127,6 +127,10 @@ allExamples = concat
              [ "5 thousand"
              , "five thousand"
              ]
+  , examples (NumeralValue (-504))
+             [ "-504"
+             , "negative five hundred and four"
+             ]
   , examples (NumeralValue (-1.2e6))
              [ "- 1,200,000"
              , "-1200000"
@@ -159,5 +163,9 @@ allExamples = concat
              ]
   , examples (NumeralValue 2200000)
              [ "two point two million"
+             ]
+  , examples (NumeralValue 3000000000)
+             [ "three billions"
+             , "three thousand millions"
              ]
   ]

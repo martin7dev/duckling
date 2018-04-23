@@ -20,30 +20,30 @@ import Duckling.Resolve
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {locale = makeLocale TR Nothing}, allExamples)
+corpus = (testContext {locale = makeLocale TR Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
-  [ examples (DistanceValue Kilometre 3)
+  [ examples (simple Kilometre 3)
              [ "3 Kilometre"
              , "3 kilometre"
              , "3 km"
              , "3km"
              ]
-  , examples (DistanceValue Kilometre 3.0)
+  , examples (simple Kilometre 3.0)
              [ "3,0 km"
              ]
-  , examples (DistanceValue Mile 8)
+  , examples (simple Mile 8)
              [ "8 Mil"
              , "8 mil"
              ]
-  , examples (DistanceValue Metre 9)
+  , examples (simple Metre 9)
              [ "9 Metre"
              , "9 metre"
              , "9 m"
              , "9m"
              ]
-  , examples (DistanceValue Centimetre 2)
+  , examples (simple Centimetre 2)
              [ "2 Santimetre"
              , "2 santim"
              , "2 cm"

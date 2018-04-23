@@ -53,12 +53,14 @@ data Lang
   | KO
   | MY
   | NB
+  | NE
   | NL
   | PL
   | PT
   | RO
   | RU
   | SV
+  | TA
   | TR
   | UK
   | VI

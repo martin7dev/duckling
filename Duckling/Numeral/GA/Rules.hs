@@ -32,12 +32,12 @@ ruleNumeralsPrefixWithNegativeOrMinus :: Rule
 ruleNumeralsPrefixWithNegativeOrMinus = Rule
   { name = "numbers prefix with -, negative or minus"
   , pattern =
-    [ regex "-|m(í|i)neas(\\sa)?\\s?"
-    , dimension Numeral
+    [ regex "-|m(í|i)neas(\\sa)?"
+    , Predicate isPositive
     ]
   , prod = \tokens -> case tokens of
       (_:
-       Token Numeral (NumeralData {TNumeral.value = v}):
+       Token Numeral NumeralData{TNumeral.value = v}:
        _) -> double $ v * (-1)
       _ -> Nothing
   }
@@ -112,7 +112,7 @@ ruleNumeralsSuffixesKMG = Rule
     , regex "([kmg])(?=[\\W\\$€]|$)"
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
+      (Token Numeral NumeralData{TNumeral.value = v}:
        Token RegexMatch (GroupMatch (match:_)):
        _) -> case Text.toLower match of
          "k" -> double $ v * 1e3

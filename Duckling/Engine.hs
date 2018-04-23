@@ -9,7 +9,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoRebindableSyntax #-}
-{-# LANGUAGE OverloadedStrings #-}
+
 
 module Duckling.Engine
   ( parseAndResolve
@@ -19,7 +19,7 @@ module Duckling.Engine
 
 import Control.DeepSeq
 import Control.Monad.Extra
-import Data.Aeson
+import Data.Aeson (toJSON)
 import Data.ByteString (ByteString)
 import Data.Functor.Identity
 import Data.Maybe
@@ -48,10 +48,10 @@ type Duckling a = Identity a
 runDuckling :: Duckling a -> a
 runDuckling ma = runIdentity ma
 
-parseAndResolve :: [Rule] -> Text -> Context -> [ResolvedToken]
-parseAndResolve rules input context = mapMaybe (resolveNode context) .
-  force $ Stash.toPosOrderedList $ runDuckling $
-  parseString rules (Document.fromText input)
+parseAndResolve :: [Rule] -> Text -> Context -> Options -> [ResolvedToken]
+parseAndResolve rules input context options =
+  mapMaybe (resolveNode context options) . force $ Stash.toPosOrderedList $
+  runDuckling $ parseString rules (Document.fromText input)
 
 produce :: Match -> Maybe Node
 produce (_, _, []) = Nothing
@@ -129,7 +129,7 @@ lookupItemAnywhere _doc (Predicate p) stash =
   return $ filter (p . token) $ Stash.toPosOrderedList stash
 
 isPositionValid :: Int -> Document -> Node -> Bool
-isPositionValid position sentence (Node {nodeRange = Range start _}) =
+isPositionValid position sentence Node{nodeRange = Range start _} =
   Document.isAdjacent sentence position start
 
 -- | A match is full if its rule pattern is empty.
@@ -153,7 +153,7 @@ matchAll sentence stash matches = concatMapM mkNextMatches matches
 -- resuming from a Match position
 matchFirst :: Document -> Stash -> Match -> Duckling [Match]
 matchFirst _ _ (Rule {pattern = []}, _, _) = return []
-matchFirst sentence stash (rule@(Rule {pattern = p:ps}), position, route) =
+matchFirst sentence stash (rule@Rule{pattern = p : ps}, position, route) =
   map (mkMatch route newRule) <$> lookupItem sentence p stash position
   where
   newRule = rule { pattern = ps }
@@ -162,7 +162,7 @@ matchFirst sentence stash (rule@(Rule {pattern = p:ps}), position, route) =
 -- starting anywhere
 matchFirstAnywhere :: Document -> Stash -> Rule -> Duckling [Match]
 matchFirstAnywhere _sentence _stash Rule {pattern = []} = return []
-matchFirstAnywhere sentence stash rule@(Rule {pattern = p:ps}) =
+matchFirstAnywhere sentence stash rule@Rule{pattern = p : ps} =
   map (mkMatch [] newRule) <$> lookupItemAnywhere sentence p stash
   where
   newRule = rule { pattern = ps }
@@ -216,13 +216,15 @@ parseString rules sentence = do
     saturateParseString headPredicateRules sentence new new partialMatches
   where
   headPredicateRules =
-    [ rule | rule@(Rule {pattern = (Predicate _:_)}) <- rules ]
+    [ rule | rule@Rule{pattern = (Predicate _ : _)} <- rules ]
 
-resolveNode :: Context -> Node -> Maybe ResolvedToken
-resolveNode context n@Node{token = (Token _ dd), nodeRange = nodeRange} = do
-  val <- resolve context dd
+resolveNode :: Context -> Options -> Node -> Maybe ResolvedToken
+resolveNode context options n@Node{token = (Token dim dd), nodeRange = r}
+  = do
+  (val, latent) <- resolve context options dd
   Just Resolved
-    { range = nodeRange
+    { range = r
     , node = n
-    , jsonValue = toJSON val
+    , rval = RVal dim val
+    , isLatent = latent
     }

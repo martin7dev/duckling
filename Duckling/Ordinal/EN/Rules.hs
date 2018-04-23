@@ -70,7 +70,6 @@ cardinalsMap = HashMap.fromList
   , ( "ninety", 90 )
   ]
 
-
 ruleOrdinals :: Rule
 ruleOrdinals = Rule
   { name = "ordinals (first..twentieth,thirtieth,...)"
@@ -83,8 +82,8 @@ ruleOrdinals = Rule
 
 ruleCompositeOrdinals :: Rule
 ruleCompositeOrdinals = Rule
-  { name = "ordinals (composite, e.g., eighty-seven)"
-  , pattern = [regex "(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\\-(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)"]
+  { name = "ordinals (composite, e.g. eighty-seven, forty—seventh, twenty ninth, thirtythird)"
+  , pattern = [regex "(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[\\s\\-\\—]?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)"]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (tens:units:_)):_) -> do
         tt <- HashMap.lookup (Text.toLower tens) cardinalsMap

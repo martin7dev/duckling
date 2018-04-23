@@ -20,17 +20,17 @@ import Duckling.Resolve
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {locale = makeLocale FR Nothing}, allExamples)
+corpus = (testContext {locale = makeLocale FR Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
-  [ examples (QuantityData Cup 2 (Just "café"))
+  [ examples (simple Cup 2 (Just "café"))
              [ "2 tasses de café"
              ]
-  , examples (QuantityData Cup 1 Nothing)
+  , examples (simple Cup 1 Nothing)
              [ "une Tasse"
              ]
-  , examples (QuantityData Tablespoon 3 (Just "sucre"))
+  , examples (simple Tablespoon 3 (Just "sucre"))
              [ "3 Cuillères à soupe de sucre"
              ]
   ]

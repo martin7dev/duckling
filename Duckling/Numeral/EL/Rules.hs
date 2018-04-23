@@ -127,8 +127,8 @@ ruleCompositeTens = Rule
       , numberBetween 1 10
       ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData { TNumeral.value = tens }) :
-       Token Numeral (NumeralData { TNumeral.value = units }) :
+      (Token Numeral NumeralData{TNumeral.value = tens} :
+       Token Numeral NumeralData{TNumeral.value = units} :
        _) -> double (tens + units)
       _ -> Nothing
   }
@@ -178,8 +178,8 @@ ruleNegative :: Rule
 ruleNegative = Rule
   { name = "negative numbers"
   , pattern =
-    [ regex "-|μείον\\s"
-    , numberWith TNumeral.value (>0)
+    [ regex "-|μείον"
+    , Predicate isPositive
     ]
   , prod = \tokens -> case tokens of
       (_:Token Numeral nd:_) -> double (TNumeral.value nd * (-1))
@@ -190,16 +190,14 @@ ruleSum :: Rule
 ruleSum = Rule
   { name = "intersect 2 numbers"
   , pattern =
-    [ numberWith (fromMaybe 0 . TNumeral.grain) (>1)
-    , numberWith TNumeral.multipliable not
+    [ Predicate hasGrain
+    , Predicate $ and . sequence [not . isMultipliable, isPositive]
     ]
-  , prod = \tokens ->
-      case tokens of
-        (Token Numeral (NumeralData {TNumeral.value = val1,
-                                     TNumeral.grain = Just g}):
-         Token Numeral (NumeralData {TNumeral.value = val2}):
-         _) | (10 ** fromIntegral g) > val2 -> double $ val1 + val2
-        _ -> Nothing
+  , prod = \tokens -> case tokens of
+      (Token Numeral NumeralData{TNumeral.value = val1, TNumeral.grain = Just g}:
+       Token Numeral NumeralData{TNumeral.value = val2}:
+       _) | (10 ** fromIntegral g) > val2 -> double $ val1 + val2
+      _ -> Nothing
   }
 
 ruleMultiply :: Rule
@@ -207,7 +205,7 @@ ruleMultiply = Rule
   { name = "compose by multiplication"
   , pattern =
     [ dimension Numeral
-    , numberWith TNumeral.multipliable id
+    , Predicate isMultipliable
     ]
   , prod = \tokens -> case tokens of
       (token1:token2:_) -> multiply token1 token2
@@ -217,7 +215,9 @@ ruleMultiply = Rule
 ruleDecimals :: Rule
 ruleDecimals = Rule
   { name = "decimal number"
-  , pattern = [regex "(\\d+,\\d+)"]
+  , pattern =
+    [ regex "(\\d+,\\d+)"
+    ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
         parseDecimal True (Text.replace "," "." match)
@@ -230,7 +230,7 @@ ruleCommaSpelledOut = Rule
   , pattern =
     [ dimension Numeral
     , regex "κόμμα"
-    , numberWith TNumeral.grain isNothing
+    , Predicate $ not . hasGrain
     ]
   , prod = \tokens -> case tokens of
       (Token Numeral nd1:_:Token Numeral nd2:_) ->
@@ -241,7 +241,9 @@ ruleCommaSpelledOut = Rule
 ruleDots :: Rule
 ruleDots = Rule
   { name = "dot-separated numbers"
-  , pattern = [regex "(\\d+(\\.\\d\\d\\d)+(,\\d+)?)"]
+  , pattern =
+    [ regex "(\\d+(\\.\\d\\d\\d)+(,\\d+)?)"
+    ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
         parseDouble (

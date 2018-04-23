@@ -10,6 +10,7 @@
 
 module Duckling.AmountOfMoney.EN.Corpus
   ( corpus
+  , negativeCorpus
   ) where
 
 import Data.String
@@ -18,8 +19,15 @@ import Prelude
 import Duckling.AmountOfMoney.Types
 import Duckling.Testing.Types
 
+negativeCorpus :: NegativeCorpus
+negativeCorpus = (testContext, testOptions, examples)
+  where
+    examples =
+      [ "exactly dollars"
+      ]
+
 corpus :: Corpus
-corpus = (testContext, allExamples)
+corpus = (testContext, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -169,6 +177,10 @@ allExamples = concat
              , "from 10 to 20 dollars"
              , "about $10-$20"
              , "10-20 dollars"
+             ]
+  , examples (between Dollar (1.1, 1.3))
+             [ "between 1.1 and 1.3 dollars"
+             , "from 1 point 1 and one point three dollars"
              ]
   , examples (under EUR 7)
              [ "under seven euros"

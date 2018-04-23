@@ -10,6 +10,7 @@
 
 module Duckling.Time.AR.Corpus
   ( corpus
+  , negativeCorpus
   ) where
 
 import Data.String
@@ -22,8 +23,18 @@ import Duckling.Time.Types hiding (Month)
 import Duckling.TimeGrain.Types hiding (add)
 import Duckling.Testing.Types hiding (examples)
 
+context :: Context
+context = testContext {locale = makeLocale AR Nothing}
+
 corpus :: Corpus
-corpus = (testContext {locale = makeLocale AR Nothing}, allExamples)
+corpus = (context, testOptions, allExamples)
+
+negativeCorpus :: NegativeCorpus
+negativeCorpus = (context, testOptions, examples)
+  where
+    examples =
+      [ "حب"
+      ]
 
 allExamples :: [Example]
 allExamples = concat
@@ -263,6 +274,7 @@ allExamples = concat
              ]
   , examples (datetime (2013, 2, 14, 6, 0, 0) Minute)
              [ "الخميس الساعة 8 بتوقيت GMT"
+             , "الخميس الساعة 8 بتوقيت gmt"
              ]
   , examples (datetime (2013, 9, 21, 13, 30, 0) Minute)
              [ "يوم السبت 21/09 الساعة 1:30 بعد الظهر"

@@ -796,19 +796,6 @@ ruleNamedmonthDayofmonth = Rule
       _ -> Nothing
   }
 
-ruleLastTuesdayLastJuly :: Rule
-ruleLastTuesdayLastJuly = Rule
-  { name = "last tuesday, last july"
-  , pattern =
-    [ regex "上"
-    , dimension Time
-    ]
-  , prod = \tokens -> case tokens of
-      (_:Token Time td:_) ->
-        tt $ predNth (-1) False td
-      _ -> Nothing
-  }
-
 rulePartofdayDimTime :: Rule
 rulePartofdayDimTime = Rule
   { name = "<part-of-day> <dim time>"
@@ -959,7 +946,7 @@ ruleTimezone = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:
        Token RegexMatch (GroupMatch (tz:_)):
-       _) -> Token Time <$> inTimezone tz td
+       _) -> Token Time <$> inTimezone (Text.toUpper tz) td
       _ -> Nothing
   }
 
@@ -1014,7 +1001,6 @@ rules =
   , ruleNCycleLast
   , ruleLastNight
   , ruleLastTime
-  , ruleLastTuesdayLastJuly
   , ruleLastYear
   , ruleMidnight
   , ruleMmdd

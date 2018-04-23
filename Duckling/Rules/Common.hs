@@ -7,7 +7,7 @@
 
 
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
+
 
 module Duckling.Rules.Common
   ( rules
@@ -40,3 +40,4 @@ rules (This Time) = []
 rules (This TimeGrain) = []
 rules (This Url) = Url.rules
 rules (This Volume) = Volume.rules
+rules (This (CustomDimension dim)) = dimRules dim
