@@ -15,7 +15,7 @@ module Duckling.Time.Helpers
     hasNoDirection, isADayOfWeek, isAMonth, isAnHourOfDay, isAPartOfDay
   , isATimeOfDay, isDOMInteger, isDOMOrdinal, isDOMValue, isGrain
   , isGrainFinerThan, isGrainOfTime, isIntegerBetween, isNotLatent
-  , isOrdinalBetween, isMidnightOrNoon, isOkWithThisNext
+  , isOrdinalBetween, isMidnightOrNoon, isOkWithThisNext, sameGrain
     -- Production
   , cycleLastOf, cycleN, cycleNth, cycleNthAfter, dayOfMonth, dayOfWeek
   , durationAfter, durationAgo, durationBefore, mkOkForThisNext, form, hour
@@ -24,7 +24,7 @@ module Duckling.Time.Helpers
   , month, monthDay, notLatent, now, nthDOWOfMonth, partOfDay, predLastOf
   , predNth, predNthAfter, predNthClosest, season, second, timeOfDayAMPM
   , weekday, weekend, withDirection, year, yearMonthDay, tt, durationIntervalAgo
-  , inDurationInterval
+  , inDurationInterval, intersectWithReplacement, yearADBC, yearMonth
     -- Other
   , getIntValue, timeComputed
   -- Rule constructors
@@ -32,6 +32,7 @@ module Duckling.Time.Helpers
   , mkRuleSeasons, mkRuleHolidays, mkRuleHolidays'
   ) where
 
+import Control.Applicative ((<|>))
 import Data.Maybe
 import Data.Ord (comparing)
 import Data.Text (Text)
@@ -58,6 +59,7 @@ import Duckling.Time.Types
   , mkYearPredicate
   , mkIntersectPredicate
   , mkTimeIntervalsPredicate
+  , mkReplaceIntersectPredicate
   , runPredicate
   , AMPM(..)
   )
@@ -114,7 +116,6 @@ timeDayOfMonth n = mkDayOfTheMonthPredicate n
 timeMonth :: Int -> TTime.Predicate
 timeMonth n = mkMonthPredicate n
 
--- | Converts 2-digits to a year between 1950 and 2050
 timeYear :: Int -> TTime.Predicate
 timeYear n = mkYearPredicate n
 
@@ -226,6 +227,11 @@ takeLastOf cyclicPred basePred =
 timeCompose :: TTime.Predicate -> TTime.Predicate -> TTime.Predicate
 timeCompose pred1 pred2 = mkIntersectPredicate pred1 pred2
 
+timeComposeWithReplacement
+  :: TTime.Predicate -> TTime.Predicate -> TTime.Predicate -> TTime.Predicate
+timeComposeWithReplacement pred1 pred2 pred3 =
+  mkReplaceIntersectPredicate pred1 pred2 pred3
+
 addDuration :: DurationData -> TTime.TimeObject -> TTime.TimeObject
 addDuration (DurationData n g) t = TTime.timePlus t g $ toInteger n
 
@@ -271,6 +277,9 @@ isGrainFinerThan _ _ = False
 isGrainOfTime :: TG.Grain -> Predicate
 isGrainOfTime value (Token Time TimeData{TTime.timeGrain = g}) = g == value
 isGrainOfTime _ _ = False
+
+sameGrain :: TimeData -> TimeData -> Bool
+sameGrain TimeData{TTime.timeGrain = g} TimeData{TTime.timeGrain = h} = g == h
 
 isADayOfWeek :: Predicate
 isADayOfWeek (Token Time td) = case TTime.form td of
@@ -350,27 +359,33 @@ intersect td1 td2 =
       | TTime.isEmptyPredicate pred -> Nothing
     res -> Just res
 
+intersectWithReplacement :: TimeData -> TimeData -> TimeData -> Maybe TimeData
+intersectWithReplacement
+  (TimeData pred1 _ g1 _ _ _ _ h1)
+  (TimeData pred2 _ g2 _ _ _ _ h2)
+  (TimeData pred3 _ g3 _ _ _ _ h3)
+  | g1 == g2 && g2 == g3 = Just $ TTime.timedata'
+    { TTime.timePred = timeComposeWithReplacement pred1 pred2 pred3
+    , TTime.timeGrain = g1
+    , TTime.direction = Nothing
+    , TTime.holiday = h1 <|> h2 <|> h3
+    }
+  | otherwise = Nothing
+
 intersect' :: (TimeData, TimeData) -> TimeData
 intersect' (TimeData pred1 _ g1 _ _ d1 _ h1, TimeData pred2 _ g2 _ _ d2 _ h2)
   | g1 < g2 = TTime.timedata'
     { TTime.timePred = timeCompose pred1 pred2
     , TTime.timeGrain = g1
-    , TTime.direction = dir
-    , TTime.holiday = hol
+    , TTime.direction = d1 <|> d2
+    , TTime.holiday = h1 <|> h2
     }
   | otherwise = TTime.timedata'
     { TTime.timePred = timeCompose pred2 pred1
     , TTime.timeGrain = g2
-    , TTime.direction = dir
-    , TTime.holiday = hol
+    , TTime.direction = d1 <|> d2
+    , TTime.holiday = h1 <|> h2
     }
-  where
-    dir = case catMaybes [d1, d2] of
-      [] -> Nothing
-      (x:_) -> Just x
-    hol = case catMaybes [h1, h2] of
-      [] -> Nothing
-      (h:_) -> Just h
 
 now :: TimeData
 now = td {TTime.timeGrain = TG.NoGrain}
@@ -404,11 +419,21 @@ month :: Int -> TimeData
 month n = form TTime.Month {TTime.month = n} $ TTime.timedata'
   {TTime.timePred = timeMonth n, TTime.timeGrain = TG.Month}
 
+-- | Converts 2-digits to a year between 1950 and 2050
 year :: Int -> TimeData
-year n = TTime.timedata' {TTime.timePred = timeYear n, TTime.timeGrain = TG.Year}
+year n = TTime.timedata'{TTime.timePred = timeYear y, TTime.timeGrain = TG.Year}
+  where
+    y = if n <= 99 then mod (n + 50) 100 + 2000 - 50 else n
+
+yearADBC :: Int -> TimeData
+yearADBC n =
+  TTime.timedata'{TTime.timePred = timeYear n, TTime.timeGrain = TG.Year}
+
+yearMonth :: Int -> Int -> TimeData
+yearMonth y m = intersect' (year y, month m)
 
 yearMonthDay :: Int -> Int -> Int -> TimeData
-yearMonthDay y m d = intersect' (intersect' (year y, month m), dayOfMonth d)
+yearMonthDay y m d = intersect' (yearMonth y m, dayOfMonth d)
 
 monthDay :: Int -> Int -> TimeData
 monthDay m d = intersect' (month m, dayOfMonth d)

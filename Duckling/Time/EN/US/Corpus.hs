@@ -141,4 +141,56 @@ allExamples = concat
              [ "Groundhog day"
              , "groundhogs day"
              ]
+  , examples (datetimeHoliday (2011, 4, 15, 0, 0, 0) Day "Emancipation Day")
+             [ "emancipation day 2011"
+             ]
+  , examples (datetimeHoliday (2012, 4, 16, 0, 0, 0) Day "Emancipation Day")
+             [ "emancipation day 2012"
+             ]
+  , examples (datetimeHoliday (2017, 4, 17, 0, 0, 0) Day "Emancipation Day")
+             [ "emancipation day 2017"
+             ]
+  , examples (datetimeHoliday (2011, 4, 18, 0, 0, 0) Day "Tax Day")
+             [ "tax day 2011"
+             , "tax day two years ago"
+             ]
+  , examples (datetimeHoliday (2012, 4, 17, 0, 0, 0) Day "Tax Day")
+             [ "tax day 2012"
+             , "tax day last year"
+             ]
+  , examples (datetimeHoliday (2013, 4, 15, 0, 0, 0) Day "Tax Day")
+             [ "next tax day"
+             , "tax day 2013"
+             ]
+  , examples (datetimeHoliday (2017, 4, 18, 0, 0, 0) Day "Tax Day")
+             [ "tax day 2017"
+             , "tax day in 4 years"
+             ]
+  , examples (datetimeHoliday (2013, 4, 10, 0, 0, 0) Day "Siblings Day")
+             [ "siblings day"
+             , "national sibling day"
+             ]
+  , examples (datetimeHoliday (2016, 4, 27, 0, 0, 0) Day "Administrative Professionals' Day")
+             [ "administrative professionals' day 2016"
+             , "administrative professionals day 2016"
+             , "administrative professional day 2016"
+             , "administrative professional's day of 2016"
+             , "secretaries' day 2016"
+             , "admins day 2016"
+             ]
+  , examples (datetimeHoliday (2010, 4, 21, 0, 0, 0) Day "Administrative Professionals' Day")
+             [ "administrative professionals' day 2010"
+             ]
+  , examples (datetimeHoliday (2019, 4, 24, 0, 0, 0) Day "Administrative Professionals' Day")
+             [ "administrative professionals' day 2019"
+             ]
+  , examples (datetimeIntervalHoliday ((2013, 4, 26, 0, 0, 0), (2013, 4, 29, 0, 0, 0)) Day "Global Youth Service Day")
+             [ "national youth service day"
+             ]
+  , examples (datetimeIntervalHoliday ((2018, 5, 20, 0, 0, 0), (2018, 5, 27, 0, 0, 0)) Day "Emergency Medical Services Week")
+             [ "ems week 2018"
+             ]
+  , examples (datetimeHoliday (2018, 5, 23, 0, 0, 0) Day "Emergency Medical Services for Children Day")
+             [ "emsc day 2018"
+             ]
   ]

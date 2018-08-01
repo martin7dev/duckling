@@ -57,7 +57,21 @@ ruleIntersectOf = Rule
   , pattern =
     [ Predicate isNotLatent
     , regex "of|from|for|'s|,"
-    , Predicate $ or . sequence [isNotLatent, isGrainOfTime TG.Year]
+    , Predicate isNotLatent
+    ]
+  , prod = \tokens -> case tokens of
+      (Token Time td1:_:Token Time td2:_) ->
+        Token Time . notLatent <$> intersect td1 td2
+      _ -> Nothing
+  }
+
+ruleIntersectYear :: Rule
+ruleIntersectYear = Rule
+  { name = "intersect by \",\", \"of\", \"from\" for year"
+  , pattern =
+    [ Predicate isNotLatent
+    , regex "of|from|,"
+    , Predicate $ isGrainOfTime TG.Year
     ]
   , prod = \tokens -> case tokens of
       (Token Time td1:_:Token Time td2:_) ->
@@ -91,9 +105,9 @@ ruleAbsorbOnADOW = Rule
 
 ruleAbsorbInMonthYear :: Rule
 ruleAbsorbInMonthYear = Rule
-  { name = "in <named-month>|year"
+  { name = "in|during <named-month>|year"
   , pattern =
-    [ regex "in"
+    [ regex "in|during"
     , Predicate $ or . sequence [isAMonth, isGrainOfTime TG.Year]
     ]
   , prod = \tokens -> case tokens of
@@ -324,6 +338,20 @@ ruleYearLatent = Rule
       _ -> Nothing
   }
 
+ruleYearADBC :: Rule
+ruleYearADBC = Rule
+  { name = "<year> (bc|ad)"
+  , pattern =
+    [ Predicate $ isIntegerBetween (-10000) 10000
+    , regex "(a\\.?d\\.?|b\\.?c\\.?)"
+    ]
+  , prod = \case
+    (token:Token RegexMatch (GroupMatch (ab:_)):_) -> do
+      y <- getIntValue token
+      tt . yearADBC $ if Text.head (Text.toLower ab) == 'b' then -y else y
+    _ -> Nothing
+  }
+
 ruleDOMLatent :: Rule
 ruleDOMLatent = Rule
   { name = "<day-of-month> (ordinal)"
@@ -412,6 +440,29 @@ ruleDOMMonth = Rule
       _ -> Nothing
   }
 
+ruleDOMMonthYear :: Rule
+ruleDOMMonthYear = Rule
+  { name = "<day-of-month>(ordinal or number)/<named-month>/year"
+  , pattern =
+    [ Predicate isDOMValue
+    , regex "[-/\\s]"
+    , Predicate isAMonth
+    , regex "[-/\\s]"
+    , regex "(\\d{4})"
+    ]
+  , prod = \tokens -> case tokens of
+      (token:
+       _:
+       Token Time td:
+       _:
+       Token RegexMatch (GroupMatch (match:_)):
+       _) -> do
+         intVal <- parseInt match
+         dom <- intersectDOM td token
+         Token Time <$> intersect dom (year intVal)
+      _ -> Nothing
+  }
+
 ruleDOMOrdinalMonthYear :: Rule
 ruleDOMOrdinalMonthYear = Rule
   { name = "<day-of-month>(ordinal) <named-month> year"
@@ -451,7 +502,7 @@ ruleTODLatent = Rule
   , prod = \tokens -> case tokens of
       (token:_) -> do
         n <- getIntValue token
-        tt . mkLatent $ hour True n
+        tt . mkLatent $ hour (n < 13) n
       _ -> Nothing
   }
 
@@ -574,10 +625,16 @@ ruleTODAMPM = Rule
   { name = "<time-of-day> am|pm"
   , pattern =
     [ Predicate isATimeOfDay
-    , regex "(in the )?([ap])(\\s|\\.)?m?\\.?"
+    , regex "(in the )?([ap])(\\s|\\.)?(m?)\\.?"
     ]
   , prod = \tokens -> case tokens of
-      (Token Time td:Token RegexMatch (GroupMatch (_:ap:_)):_) ->
+      (Token Time td@TimeData{TTime.latent = True}:
+       Token RegexMatch (GroupMatch (_:ap:_:"":_)):
+       _) ->
+        tt . mkLatent $ timeOfDayAMPM (Text.toLower ap == "a") td
+      (Token Time td@TimeData{TTime.form = Just (TTime.TimeOfDay (Just hours) _)}:
+       Token RegexMatch (GroupMatch (_:ap:_)):
+       _) | hours < 13 ->
         tt $ timeOfDayAMPM (Text.toLower ap == "a") td
       _ -> Nothing
   }
@@ -586,15 +643,18 @@ ruleHONumeral :: Rule
 ruleHONumeral = Rule
   { name = "<hour-of-day> <integer>"
   , pattern =
-    [ Predicate $ and . sequence [isNotLatent, isAnHourOfDay]
+    [ Predicate isAnHourOfDay
     , Predicate $ isIntegerBetween 1 59
     ]
   , prod = \tokens -> case tokens of
-      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:
+      (Token Time TimeData{TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)
+                          ,TTime.latent = isLatent}:
        token:
        _) -> do
         n <- getIntValue token
-        tt $ hourMinute is12H hours n
+        if isLatent
+          then tt . mkLatent $ hourMinute is12H hours n
+          else tt $ hourMinute is12H hours n
       _ -> Nothing
   }
 
@@ -606,8 +666,8 @@ ruleHODHalf = Rule
     , regex "half"
     ]
   , prod = \tokens -> case tokens of
-      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:_) ->
-        tt $ hourMinute is12H hours 30
+      (Token Time TimeData{TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:
+       _) -> tt $ hourMinute is12H hours 30
       _ -> Nothing
   }
 
@@ -619,8 +679,8 @@ ruleHODQuarter = Rule
     , regex "(a|one)? ?quarter"
     ]
   , prod = \tokens -> case tokens of
-      (Token Time TimeData {TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:_) ->
-        tt $ hourMinute is12H hours 15
+      (Token Time TimeData{TTime.form = Just (TTime.TimeOfDay (Just hours) is12H)}:
+       _) -> tt $ hourMinute is12H hours 15
       _ -> Nothing
   }
 
@@ -722,11 +782,25 @@ ruleMMYYYY = Rule
   , pattern =
     [ regex "(0?[1-9]|1[0-2])[/-](\\d{4})"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (mm:yy:_)):_) -> do
         y <- parseInt yy
         m <- parseInt mm
-        tt $ yearMonthDay y m 1
+        tt $ yearMonth y m
+      _ -> Nothing
+  }
+
+ruleYYYYMM :: Rule
+ruleYYYYMM = Rule
+  { name = "yyyy-mm"
+  , pattern =
+    [ regex "(\\d{4})\\s*[/-]\\s*(1[0-2]|0?[1-9])"
+    ]
+  , prod = \case
+      (Token RegexMatch (GroupMatch (yy:mm:_)):_) -> do
+        y <- parseInt yy
+        m <- parseInt mm
+        tt $ yearMonth y m
       _ -> Nothing
   }
 
@@ -736,12 +810,26 @@ ruleYYYYMMDD = Rule
   , pattern =
     [ regex "(\\d{2,4})-(0?[1-9]|1[0-2])-(3[01]|[12]\\d|0?[1-9])"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (yy:mm:dd:_)):_) -> do
         y <- parseInt yy
         m <- parseInt mm
         d <- parseInt dd
         tt $ yearMonthDay y m d
+      _ -> Nothing
+  }
+
+ruleYYYYQQ :: Rule
+ruleYYYYQQ = Rule
+  { name = "yyyyqq"
+  , pattern =
+    [ regex "(\\d{2,4})q([1-4])"
+    ]
+  , prod = \case
+      (Token RegexMatch (GroupMatch (yy:qq:_)):_) -> do
+        y <- parseInt yy
+        q <- parseInt qq
+        tt . cycleNthAfter True TG.Quarter (q - 1) $ year y
       _ -> Nothing
   }
 
@@ -751,7 +839,7 @@ ruleNoonMidnightEOD = Rule
   , pattern =
     [ regex "(noon|midni(ght|te)|(the )?(EOD|end of (the )?day))"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (match:_)):_) -> tt . hour False $
         if Text.toLower match == "noon" then 12 else 0
       _ -> Nothing
@@ -1034,6 +1122,22 @@ ruleIntervalDash = Rule
       _ -> Nothing
   }
 
+ruleIntervalSlash :: Rule
+ruleIntervalSlash = Rule
+  { name = "<datetime>/<datetime> (interval)"
+  , pattern =
+    [ Predicate isNotLatent
+    , regex "/"
+    , Predicate isNotLatent
+    ]
+  , prod = \tokens -> case tokens of
+      (Token Time td1:_:Token Time td2:_) ->
+        if sameGrain td1 td2 then
+          Token Time <$> interval TTime.Closed td1 td2
+        else Nothing
+      _ -> Nothing
+  }
+
 ruleIntervalFrom :: Rule
 ruleIntervalFrom = Rule
   { name = "from <datetime> - <datetime> (interval)"
@@ -1162,27 +1266,27 @@ ruleIntervalByTheEndOf = Rule
       _ -> Nothing
   }
 
-ruleIntervalUntilTOD :: Rule
-ruleIntervalUntilTOD = Rule
-  { name = "until <time-of-day>"
+ruleIntervalUntilTime :: Rule
+ruleIntervalUntilTime = Rule
+  { name = "until <time>"
   , pattern =
     [ regex "(anytime |sometimes? )?(before|(un)?til(l)?|through|up to)"
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> tt $ withDirection TTime.Before td
+      (_:Token Time td:_) -> tt . withDirection TTime.Before $ notLatent td
       _ -> Nothing
   }
 
-ruleIntervalAfterFromSinceTOD :: Rule
-ruleIntervalAfterFromSinceTOD = Rule
-  { name = "from|since|after <time-of-day>"
+ruleIntervalAfterFromSinceTime :: Rule
+ruleIntervalAfterFromSinceTime = Rule
+  { name = "from|since|after <time>"
   , pattern =
     [ regex "from|since|(anytime |sometimes? )?after"
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> tt $ withDirection TTime.After td
+      (_:Token Time td:_) -> tt . withDirection TTime.After $ notLatent td
       _ -> Nothing
   }
 
@@ -1553,6 +1657,10 @@ rulePeriodicHolidays = mkRuleHolidays
   , ( "World Philosophy Day", "world philosophy day", nthDOWOfMonth 3 4 11 )
   , ( "World Religion Day", "world religion day", nthDOWOfMonth 3 7 1 )
   , ( "World Sight Day", "world sight day", nthDOWOfMonth 2 4 10 )
+
+  -- Other
+  , ( "Boss's Day", "boss'?s?( day)?"
+    , predNthClosest 0 weekday (monthDay 10 16) )
   ]
 
 ruleComputedHolidays :: [Rule]
@@ -1637,9 +1745,9 @@ ruleComputedHolidays = mkRuleHolidays
     , cycleNthAfter False TG.Day (-1) orthodoxEaster )
   , ( "Orthodox Great Friday", "orthodox\\s+great(\\s+and\\s+holy)?\\s+friday"
     , cycleNthAfter False TG.Day (-2) orthodoxEaster )
-  , ( "Orthodox Palm Sunday", "orthodox\\s+(branch|palm|yew\\s+sunday)"
+  , ( "Orthodox Palm Sunday", "orthodox\\s+(branch|palm|yew)\\s+sunday"
     , cycleNthAfter False TG.Day (-7) orthodoxEaster )
-  , ( "Palm Sunday", "branch|palm|yew\\s+sunday"
+  , ( "Palm Sunday", "(branch|palm|yew)\\s+sunday"
     , cycleNthAfter False TG.Day (-7) easterSunday )
   , ( "Pentecost", "pentecost|white sunday|whitsunday"
     , cycleNthAfter False TG.Day 49 easterSunday )
@@ -1662,6 +1770,8 @@ ruleComputedHolidays = mkRuleHolidays
     , cycleNthAfter False TG.Day 9 navaratri )
   -- 15th day of Shevat
   , ( "Tu BiShvat", "tu b[i']shvat", tuBishvat )
+  -- day of the full moon in May in the Gregorian calendar
+  , ( "Vesak", "v(e|ai)sak(ha)?|buddha (day|purnima)", vesak )
   , ( "Yom Ha'atzmaut", "yom ha'?atzmaut", yomHaatzmaut )
   , ( "Yom HaShoah"
     , "yom hashoah|yom hazikaron lashoah ve-lag'vurah|holocaust (remembrance )?day"
@@ -1669,19 +1779,19 @@ ruleComputedHolidays = mkRuleHolidays
   , ( "Yom Kippur", "yom\\s+kippur", cycleNthAfter False TG.Day 9 roshHashana )
   , ( "Whit Monday", "(pentecost|whit)\\s+monday|monday of the holy spirit"
     , cycleNthAfter False TG.Day 50 easterSunday )
-
-  -- Other
-  , ( "Boss's Day", "boss'?s?( day)?"
-    , predNthClosest 0 weekday (monthDay 10 16) )
   ]
 
 ruleComputedHolidays' :: [Rule]
 ruleComputedHolidays' = mkRuleHolidays'
-  [ ( "Great Lent", "great\\s+(fast|lent)"
+  [ ( "Global Youth Service Day", "global youth service day|gysd"
+    , let start = globalYouthServiceDay
+          end = cycleNthAfter False TG.Day 2 globalYouthServiceDay
+        in interval TTime.Open start end )
+  , ( "Great Lent", "great\\s+(fast|lent)"
     , let start = cycleNthAfter False TG.Day (-48) orthodoxEaster
           end = cycleNthAfter False TG.Day (-9) orthodoxEaster
         in interval TTime.Open start end )
-  , ( "Hanukkah", "c?hanukk?ah"
+  , ( "Hanukkah", "c?hann?ukk?ah"
     , let start = chanukah
           end = cycleNthAfter False TG.Day 7 chanukah
         in interval TTime.Open start end )
@@ -1701,7 +1811,7 @@ ruleComputedHolidays' = mkRuleHolidays'
     , let start = ramadan
           end = cycleNthAfter False TG.Day (-1) eidalFitr
         in interval TTime.Open start end )
-  , ( "Rosh Hashanah", "rosh hashanah|yom teruah"
+  , ( "Rosh Hashanah", "rosh hashann?ah?|yom teruah"
     , let start = roshHashana
           end = cycleNthAfter False TG.Day 2 roshHashana
         in interval TTime.Open start end )
@@ -1713,6 +1823,18 @@ ruleComputedHolidays' = mkRuleHolidays'
     , let start = cycleNthAfter False TG.Day 14 roshHashana
           end = cycleNthAfter False TG.Day 22 roshHashana
         in interval TTime.Open start end )
+
+  -- Other
+  -- Last Saturday of March unless it falls on Holy Saturday
+  -- In which case it's the Saturday before
+  , ( "Earth Hour", "earth hour"
+    , let holySaturday = cycleNthAfter False TG.Day (-1) easterSunday
+          tentative = predLastOf (dayOfWeek 6) (month 3)
+          alternative = cycleNthAfter False TG.Day (-7) tentative
+        in do
+          day <- intersectWithReplacement holySaturday tentative alternative
+          start <- intersect day $ hourMinute True 20 30
+          interval TTime.Closed start $ cycleNthAfter False TG.Minute 60 start )
   ]
 
 ruleCycleThisLastNext :: Rule
@@ -1804,6 +1926,23 @@ ruleCycleOrdinalOfTime = Rule
       _ -> Nothing
   }
 
+ruleCycleLastOrdinalOfTime :: Rule
+ruleCycleLastOrdinalOfTime = Rule
+  { name = "<ordinal> last <cycle> of <time>"
+  , pattern =
+    [ dimension Ordinal
+    , regex "last"
+    , dimension TimeGrain
+    , regex "of|in|from"
+    , dimension Time
+    ]
+  , prod = \tokens -> case tokens of
+      (token:_:Token TimeGrain grain:_:Token Time td:_) -> do
+        n <- getIntValue token
+        tt . cycleNthAfter True grain (-n) . cycleNthAfter True (timeGrain td) 1 $ td
+      _ -> Nothing
+  }
+
 ruleCycleTheOrdinalOfTime :: Rule
 ruleCycleTheOrdinalOfTime = Rule
   { name = "the <ordinal> <cycle> of <time>"
@@ -1818,6 +1957,24 @@ ruleCycleTheOrdinalOfTime = Rule
       (_:token:Token TimeGrain grain:_:Token Time td:_) -> do
         n <- getIntValue token
         tt $ cycleNthAfter True grain (n - 1) td
+      _ -> Nothing
+  }
+
+ruleCycleTheLastOrdinalOfTime :: Rule
+ruleCycleTheLastOrdinalOfTime = Rule
+  { name = "the <ordinal> last <cycle> of <time>"
+  , pattern =
+    [ regex "the"
+    , dimension Ordinal
+    , regex "last"
+    , dimension TimeGrain
+    , regex "of|in|from"
+    , dimension Time
+    ]
+  , prod = \tokens -> case tokens of
+      (_:token:_:Token TimeGrain grain:_:Token Time td:_) -> do
+        n <- getIntValue token
+        tt . cycleNthAfter True grain (-n) . cycleNthAfter True (timeGrain td) 1 $ td
       _ -> Nothing
   }
 
@@ -2060,6 +2217,35 @@ ruleIntervalForDurationFrom = Rule
       _ -> Nothing
 }
 
+ruleIntervalTimeForDuration :: Rule
+ruleIntervalTimeForDuration = Rule
+  { name = "<time> for <duration>"
+  , pattern =
+    [ Predicate isNotLatent
+    , regex "for"
+    , dimension Duration
+    ]
+  , prod = \tokens -> case tokens of
+      (Token Time td1:_:Token Duration dd:_) ->
+        Token Time <$> interval TTime.Open td1 (durationAfter dd td1)
+      _ -> Nothing
+}
+
+ruleIntervalFromTimeForDuration :: Rule
+ruleIntervalFromTimeForDuration = Rule
+  { name = "from <time> for <duration>"
+  , pattern =
+    [ regex "(from|starting|beginning|after|starting from)"
+    , Predicate isNotLatent
+    , regex "for"
+    , dimension Duration
+    ]
+  , prod = \tokens -> case tokens of
+      (_:Token Time td1:_:Token Duration dd:_) ->
+        Token Time <$> interval TTime.Open td1 (durationAfter dd td1)
+      _ -> Nothing
+}
+
 ruleTimezone :: Rule
 ruleTimezone = Rule
   { name = "<time> timezone"
@@ -2078,6 +2264,7 @@ rules :: [Rule]
 rules =
   [ ruleIntersect
   , ruleIntersectOf
+  , ruleIntersectYear
   , ruleAbsorbOnTime
   , ruleAbsorbOnADOW
   , ruleAbsorbInMonthYear
@@ -2096,6 +2283,7 @@ rules =
   , ruleNthTimeAfterTime
   , ruleTheNthTimeAfterTime
   , ruleYearLatent
+  , ruleYearADBC
   , ruleTheDOMNumeral
   , ruleTheDOMOrdinal
   , ruleDOMLatent
@@ -2104,6 +2292,7 @@ rules =
   , ruleDOMMonth
   , ruleDOMOfMonth
   , ruleDOMOrdinalMonthYear
+  , ruleDOMMonthYear
   , ruleIdesOfMonth
   , ruleTODLatent
   , ruleAtTOD
@@ -2125,6 +2314,8 @@ rules =
   , ruleHalfAfterHOD
   , ruleQuarterAfterHOD
   , ruleHalfHOD
+  , ruleYYYYQQ
+  , ruleYYYYMM
   , ruleYYYYMMDD
   , ruleMMYYYY
   , ruleNoonMidnightEOD
@@ -2144,6 +2335,7 @@ rules =
   , ruleIntervalMonthDDDD
   , ruleIntervalDDDDMonth
   , ruleIntervalDash
+  , ruleIntervalSlash
   , ruleIntervalFrom
   , ruleIntervalBetween
   , ruleIntervalTODDash
@@ -2152,14 +2344,16 @@ rules =
   , ruleIntervalTODBetween
   , ruleIntervalBy
   , ruleIntervalByTheEndOf
-  , ruleIntervalUntilTOD
-  , ruleIntervalAfterFromSinceTOD
+  , ruleIntervalUntilTime
+  , ruleIntervalAfterFromSinceTime
   , ruleCycleTheAfterBeforeTime
   , ruleCycleThisLastNext
   , ruleDOMOfTimeMonth
   , ruleCycleAfterBeforeTime
   , ruleCycleOrdinalOfTime
+  , ruleCycleLastOrdinalOfTime
   , ruleCycleTheOrdinalOfTime
+  , ruleCycleTheLastOrdinalOfTime
   , ruleCycleTheOfTime
   , ruleCycleOrdinalAfterTime
   , ruleCycleTheOrdinalAfterTime
@@ -2174,6 +2368,8 @@ rules =
   , ruleDayInDuration
   , ruleDurationAfterBeforeTime
   , ruleIntervalForDurationFrom
+  , ruleIntervalFromTimeForDuration
+  , ruleIntervalTimeForDuration
   , ruleInNumeral
   , ruleTimezone
   , rulePartOfMonth

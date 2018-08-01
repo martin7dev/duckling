@@ -24,6 +24,7 @@ import Duckling.Types
 import qualified Duckling.Dimensions.Common as CommonDimensions
 import qualified Duckling.Dimensions.AR as ARDimensions
 import qualified Duckling.Dimensions.BG as BGDimensions
+import qualified Duckling.Dimensions.BN as BNDimensions
 import qualified Duckling.Dimensions.CS as CSDimensions
 import qualified Duckling.Dimensions.DA as DADimensions
 import qualified Duckling.Dimensions.DE as DEDimensions
@@ -31,6 +32,7 @@ import qualified Duckling.Dimensions.EL as ELDimensions
 import qualified Duckling.Dimensions.EN as ENDimensions
 import qualified Duckling.Dimensions.ES as ESDimensions
 import qualified Duckling.Dimensions.ET as ETDimensions
+import qualified Duckling.Dimensions.FI as FIDimensions
 import qualified Duckling.Dimensions.FR as FRDimensions
 import qualified Duckling.Dimensions.GA as GADimensions
 import qualified Duckling.Dimensions.HE as HEDimensions
@@ -88,6 +90,7 @@ dependents (This (CustomDimension dim)) = dimDependents dim
 langDimensions :: Lang -> [Some Dimension]
 langDimensions AR = ARDimensions.allDimensions
 langDimensions BG = BGDimensions.allDimensions
+langDimensions BN = BNDimensions.allDimensions
 langDimensions CS = CSDimensions.allDimensions
 langDimensions DA = DADimensions.allDimensions
 langDimensions DE = DEDimensions.allDimensions
@@ -95,6 +98,7 @@ langDimensions EL = ELDimensions.allDimensions
 langDimensions EN = ENDimensions.allDimensions
 langDimensions ES = ESDimensions.allDimensions
 langDimensions ET = ETDimensions.allDimensions
+langDimensions FI = FIDimensions.allDimensions
 langDimensions FR = FRDimensions.allDimensions
 langDimensions GA = GADimensions.allDimensions
 langDimensions HE = HEDimensions.allDimensions

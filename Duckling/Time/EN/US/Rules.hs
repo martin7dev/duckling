@@ -21,6 +21,7 @@ import Prelude
 import Duckling.Dimensions.Types
 import Duckling.Numeral.Helpers (parseInt)
 import Duckling.Regex.Types
+import Duckling.Time.Computed
 import Duckling.Time.Helpers
 import Duckling.Time.Types (TimeData (..))
 import Duckling.Types
@@ -98,7 +99,6 @@ rulePeriodicHolidays = mkRuleHolidays
   , ( "D-Day", "d\\-day", monthDay 6 6 )
   , ( "Day After Christmas Day", "day after christmas day", monthDay 12 26 )
   , ( "Elizabeth Peratrovich Day", "elizabeth peratrovich day", monthDay 2 16 )
-  , ( "Emancipation Day", "emancipation day", monthDay 4 16 )
   , ( "Evacuation Day", "evacuation day", monthDay 3 17 )
   , ( "Father Damien Day", "father damien day", monthDay 4 15 )
   , ( "Feast of Our Lady of Guadalupe", "feast of our lady of guadalupe", monthDay 12 12 )
@@ -142,6 +142,7 @@ rulePeriodicHolidays = mkRuleHolidays
   , ( "San Jacinto Day", "san jacinto day", monthDay 4 21 )
   , ( "Self-Injury Awareness Day", "self\\-injury awareness day", monthDay 3 1 )
   , ( "Senior Citizens Day", "senior citizens day", monthDay 8 21 )
+  , ( "Siblings Day", "(national )?sibling'?s?'? day", monthDay 4 10 )
   , ( "St Nicholas' Day", "st\\.? nicholas'? day", monthDay 12 6 )
   , ( "St. David's Day", "st\\.? david'?s day", monthDay 3 1 )
   , ( "Statehood Day", "statehood day", monthDay 6 1 )
@@ -230,12 +231,52 @@ rulePeriodicHolidays = mkRuleHolidays
     , "(george )?washington'?s? (birth)?day|president'?s?'? day|daisy gatson bates'? day"
     , nthDOWOfMonth 3 1 2
     )
+
+  -- Wednesday of the last full week of April, where a full week starts on
+  -- Sunday and ends on Saturday.
+  , ( "Administrative Professionals' Day"
+    , "(administrative professional|secretarie|admin)('?s'?)? day"
+    , cycleNthAfter False TG.Day (-3) $
+        predNthAfter (-1) (dayOfWeek 6) (monthDay 5 1) )
+  -- Wednesday of the 3rd full week in May, starting on a Sunday
+  , ( "Emergency Medical Services for Children Day"
+    , "(national )?(emsc|emergency medical services for children) day"
+    , cycleNthAfter False TG.Day 3 $ predNthAfter 2 (dayOfWeek 7) (monthDay 5 1)
+    )
+
+  -- Other
+  , ( "Emancipation Day", "emancipation day"
+    , predNthClosest 0 weekday $ monthDay 4 16 )
   ]
 
 rulePeriodicHolidays' :: [Rule]
 rulePeriodicHolidays' = mkRuleHolidays'
   -- Fixed dates, year over year
   [ ( "Kwanzaa", "kwanzaa", interval TTime.Open (monthDay 12 26) (monthDay 1 1) )
+
+  -- 3rd full week in May, starting on a Sunday
+  , ( "Emergency Medical Services Week"
+    , "(national )?(ems|emergency medical services) week"
+    , let start = predNthAfter 2 (dayOfWeek 7) (monthDay 5 1)
+          end = cycleNthAfter False TG.Day 6 start
+      in interval TTime.Open start end )
+
+  -- Other
+  -- First weekday on or after April 15 if different than Emancipation Day
+  -- Otherwise, first weekday following Emancipation Day
+  , ( "Tax Day", "tax day"
+    , let emancipationDay = predNthClosest 0 weekday $ monthDay 4 16
+          tentative = predNthAfter 0 weekday $ monthDay 4 15
+          alternative = predNthAfter 1 weekday emancipationDay
+      in intersectWithReplacement emancipationDay tentative alternative )
+  ]
+
+ruleComputedHolidays' :: [Rule]
+ruleComputedHolidays' = mkRuleHolidays'
+  [ ( "Global Youth Service Day", "national youth service day"
+    , let start = globalYouthServiceDay
+          end = cycleNthAfter False TG.Day 2 globalYouthServiceDay
+        in interval TTime.Open start end )
   ]
 
 rulesBackwardCompatible :: [Rule]
@@ -250,3 +291,4 @@ rules :: [Rule]
 rules = rulesBackwardCompatible
   ++ rulePeriodicHolidays
   ++ rulePeriodicHolidays'
+  ++ ruleComputedHolidays'
