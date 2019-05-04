@@ -11,7 +11,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Time.DE.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
 import Prelude
 import Data.Text (Text)
@@ -20,7 +21,7 @@ import qualified Data.Text as Text
 import Duckling.Dimensions.Types
 import Duckling.Numeral.Helpers (parseInt)
 import Duckling.Ordinal.Types (OrdinalData (..))
-import Duckling.Regex.Types
+import Duckling.Regex.Types (GroupMatch(..))
 import Duckling.Time.Helpers
 import Duckling.Time.Types (TimeData (..))
 import Duckling.Types
@@ -38,6 +39,7 @@ ruleInstants = mkRuleInstants
   , ( "yesterday"       , TG.Day   , -1, "gestern" )
   , ( "after tomorrow"  , TG.Day   ,  2, "(ü)bermorgen" )
   , ( "before yesterday", TG.Day   , -2, "vorgestern" )
+  , ( "3 days ago"      , TG.Day   , -3, "vorvorgestern" )
   , ( "EOM|End of month", TG.Month ,  1, "(das )?ende des monats?" )
   , ( "EOY|End of year" , TG.Year  ,  1,
        "(das )?(EOY|jahr(es)? ?ende|ende (des )?jahr(es)?)" )
@@ -121,8 +123,7 @@ ruleRelativeMinutesTotillbeforeIntegerHourofday = Rule
   , prod = \tokens -> case tokens of
       (token:_:Token Time td:_) -> do
         n <- getIntValue token
-        t <- minutesBefore n td
-        Just $ Token Time t
+        Token Time <$> minutesBefore n td
       _ -> Nothing
   }
 
@@ -134,9 +135,7 @@ ruleQuarterTotillbeforeIntegerHourofday = Rule
     , Predicate isAnHourOfDay
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> do
-        t <- minutesBefore 15 td
-        Just $ Token Time t
+      (_:Token Time td:_) -> Token Time <$> minutesBefore 15 td
       _ -> Nothing
   }
 
@@ -148,9 +147,7 @@ ruleHalfTotillbeforeIntegerHourofday = Rule
     , Predicate isAnHourOfDay
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> do
-        t <- minutesBefore 30 td
-        Just $ Token Time t
+      (_:Token Time td:_) -> Token Time <$> minutesBefore 30 td
       _ -> Nothing
   }
 
@@ -827,8 +824,7 @@ ruleByTheEndOfTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> Token Time <$>
-        interval TTime.Closed td (cycleNth TG.Second 0)
+      (_:Token Time td:_) -> Token Time <$> interval TTime.Closed td now
       _ -> Nothing
   }
 
@@ -839,9 +835,8 @@ ruleAfterWork = Rule
     [ regex "nach (der)? arbeit|(am)? feier ?abend"
     ]
   , prod = \_ -> do
-      let td1 = cycleNth TG.Day 0
       td2 <- interval TTime.Open (hour False 17) (hour False 21)
-      Token Time . partOfDay <$> intersect td1 td2
+      Token Time . partOfDay <$> intersect today td2
   }
 
 ruleLastNCycle :: Rule
@@ -880,7 +875,7 @@ ruleWithinDuration = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:Token Duration dd:_) -> Token Time <$>
-        interval TTime.Open (cycleNth TG.Second 0) (inDuration dd)
+        interval TTime.Open now (inDuration dd)
       _ -> Nothing
   }
 
@@ -1057,7 +1052,7 @@ ruleYyyymmdd :: Rule
 ruleYyyymmdd = Rule
   { name = "yyyy-mm-dd"
   , pattern =
-    [ regex "(\\d{2,4})-(0?[1-9]|10|11|12)-([012]?[1-9]|10|20|30|31)"
+    [ regex "(\\d{2,4})-(1[0-2]|0?[1-9])-(3[01]|[12]\\d|0?[1-9])"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (m1:m2:m3:_)):_) -> do
@@ -1147,8 +1142,7 @@ ruleThisPartofday = Rule
     , Predicate isAPartOfDay
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> Token Time . partOfDay <$>
-        intersect (cycleNth TG.Day 0) td
+      (_:Token Time td:_) -> Token Time . partOfDay <$> intersect today td
       _ -> Nothing
   }
 
@@ -1211,9 +1205,8 @@ ruleAfterLunch = Rule
     [ regex "nach dem mittagessen|nachmittags?"
     ]
   , prod = \_ -> do
-      let td1 = cycleNth TG.Day 0
       td2 <- interval TTime.Open (hour False 13) (hour False 17)
-      Token Time . partOfDay <$> intersect td1 td2
+      Token Time . partOfDay <$> intersect today td2
   }
 
 ruleOnANamedday :: Rule
@@ -1299,9 +1292,7 @@ ruleHalfIntegerGermanStyleHourofday = Rule
     , Predicate isAnHourOfDay
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> do
-        t <- minutesBefore 30 td
-        Just $ Token Time t
+      (_:Token Time td:_) -> Token Time <$> minutesBefore 30 td
       _ -> Nothing
   }
 
@@ -1369,9 +1360,8 @@ ruleTonight = Rule
     [ regex "heute? (am)? abends?"
     ]
   , prod = \_ -> do
-      let td1 = cycleNth TG.Day 0
       td2 <- interval TTime.Open (hour False 18) (hour False 0)
-      Token Time . partOfDay <$> intersect td1 td2
+      Token Time . partOfDay <$> intersect today td2
   }
 
 ruleYear :: Rule

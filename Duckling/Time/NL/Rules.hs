@@ -84,7 +84,6 @@ ruleHolidays = mkRuleHolidays
   [ ( "Nieuwjaarsdag", "nieuwjaars?(dag)?", monthDay  1  1 )
   , ( "Valentijnsdag", "valentijns?(dag)?", monthDay  2 14 )
   , ( "Halloween", "hall?oween?", monthDay 10 31 )
-  , ( "Koningsdag", "konings?dag", monthDay  4 27 )
   , ( "Allerheiligen", "allerheiligen?|aller heiligen?", monthDay 11  1 )
   , ( "Kerstavond", "kerstavond", monthDay 12 24 )
   , ( "Tweede Kerstdag", "tweede kerstdag", monthDay 12 26 )
@@ -94,6 +93,20 @@ ruleHolidays = mkRuleHolidays
   , ( "Vaderdag", "vaderdag", nthDOWOfMonth 3 7 6 )
   ]
 
+ruleComputedHolidays' :: [Rule]
+ruleComputedHolidays' = mkRuleHolidays'
+  [
+  -- king's day is on April 27th unless its on Sunday in which case its a day
+  -- earlier used a bit of a trick since intersectWithReplacement expects all
+  -- times to be aligned in granularity (e.g once a week, twice a year, etc.)
+  -- we intersect with last Sunday of April since if "4/27 is on Sunday" it
+  -- will be the last Sunday on April
+    ( "Koningsdag", "king's day|koningsdag"
+    , let tentative = monthDay 4 27
+          alternative = monthDay 4 26
+          lastSundayOfApril = predLastOf (dayOfWeek 7) (month 4)
+        in intersectWithReplacement lastSundayOfApril tentative alternative )
+  ]
 ruleRelativeMinutesToOrAfterIntegerPartOfDay :: Rule
 ruleRelativeMinutesToOrAfterIntegerPartOfDay = Rule
   { name = "relative minutes to|till|before|after <integer> (time-of-day)"
@@ -221,7 +234,7 @@ ruleEvenings = Rule
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) -> do
         td1 <- case Text.toLower match of
-          "van"    -> Just $ cycleNth TG.Day 0
+          "van"    -> Just today
           "morgen" -> Just $ cycleNth TG.Day 1
           _        -> Just $ cycleNth TG.Day $ - 1
         td2 <- interval TTime.Open (hour False 18) (hour False 0)
@@ -502,7 +515,7 @@ ruleAfternoons = Rule
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) -> do
         td1 <- case Text.toLower match of
-          "vanmiddag"     -> Just $ cycleNth TG.Day 0
+          "vanmiddag"     -> Just today
           "morgenmiddag"  -> Just $ cycleNth TG.Day 1
           "morgenmiddags" -> Just $ cycleNth TG.Day 1
           _               -> Just . cycleNth TG.Day $ - 1
@@ -698,12 +711,11 @@ ruleByTheEndOfTime :: Rule
 ruleByTheEndOfTime = Rule
   { name = "by the end of <time>"
   , pattern =
-    [ regex "tot (het)? einde (van)?|voor"
+    [ regex "tot( het)? einde( van)?"
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> Token Time <$>
-        interval TTime.Closed td (cycleNth TG.Second 0)
+      (_:Token Time td:_) -> Token Time <$> interval TTime.Closed now td
       _ -> Nothing
   }
 
@@ -714,9 +726,8 @@ ruleAfterWork = Rule
     [ regex "na het werk"
     ]
   , prod = \_ -> do
-      let td1 = cycleNth TG.Day 0
       td2 <- interval TTime.Open (hour False 17) (hour False 21)
-      Token Time . partOfDay <$> intersect td1 td2
+      Token Time . partOfDay <$> intersect today td2
   }
 
 ruleLastNCycle :: Rule
@@ -755,7 +766,7 @@ ruleWithinDuration = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:Token Duration dd:_) -> Token Time <$>
-        interval TTime.Open (cycleNth TG.Second 0) (inDuration dd)
+        interval TTime.Open now (inDuration dd)
       _ -> Nothing
   }
 
@@ -1022,7 +1033,7 @@ ruleMornings = Rule
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) -> do
         td1 <- case Text.toLower match of
-          "vanmorgen"     -> Just $ cycleNth TG.Day 0
+          "vanmorgen"     -> Just today
           "morgenochtend" -> Just $ cycleNth TG.Day 1
           _               -> Just . cycleNth TG.Day $ - 1
         td2 <- interval TTime.Open (hour False 0) (hour False 12)
@@ -1038,8 +1049,7 @@ ruleThisPartofday = Rule
     , Predicate isAPartOfDay
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> Token Time . partOfDay <$>
-        intersect (cycleNth TG.Day 0) td
+      (_:Token Time td:_) -> Token Time . partOfDay <$> intersect today td
       _ -> Nothing
   }
 
@@ -1087,9 +1097,8 @@ ruleAfterLunch = Rule
     [ regex "na de lunch|na het middageten"
     ]
   , prod = \_ -> do
-      let td1 = cycleNth TG.Day 0
       td2 <- interval TTime.Open (hour False 13) (hour False 17)
-      Token Time . partOfDay <$> intersect td1 td2
+      Token Time . partOfDay <$> intersect today td2
   }
 
 ruleOnANamedday :: Rule
@@ -1596,3 +1605,4 @@ rules =
   ++ ruleMonths
   ++ ruleSeasons
   ++ ruleHolidays
+  ++ ruleComputedHolidays'

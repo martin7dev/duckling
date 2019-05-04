@@ -79,8 +79,7 @@ ruleRelativeMinutesTotillbeforeIntegerHourofday = Rule
   , prod = \tokens -> case tokens of
       (token:_:Token Time td:_) -> do
         n <- getIntValue token
-        t <- minutesBefore n td
-        Just $ Token Time t
+        Token Time <$> minutesBefore n td
       _ -> Nothing
   }
 
@@ -265,7 +264,7 @@ ruleNow = Rule
   , pattern =
     [ regex "(w)? ?(tym|tej)? ?(teraz|momencie|chwili|momeńcie)"
     ]
-  , prod = \_ -> tt $ cycleNth TG.Second 0
+  , prod = \_ -> tt now
   }
 
 ruleLastCycleOfTime :: Rule
@@ -398,9 +397,9 @@ ruleToday :: Rule
 ruleToday = Rule
   { name = "today"
   , pattern =
-    [ regex "dzisiejszy|dzisiaj|dziś|dzis|w ten dzień|w ten dzien|w obecny dzień|w obecny dzien|obecnego dnia"
+    [ regex "dzisiejszy|dzisiaj|dzi[śs]|w ten dzień|w ten dzien|w obecny dzień|w obecny dzien|obecnego dnia"
     ]
-  , prod = \_ -> tt $ cycleNth TG.Day 0
+  , prod = \_ -> tt today
   }
 
 ruleThisnextDayofweek :: Rule
@@ -532,19 +531,6 @@ ruleLunch = Rule
            interval TTime.Open from to
   }
 
-ruleLastCycle :: Rule
-ruleLastCycle = Rule
-  { name = "last <cycle>"
-  , pattern =
-    [ regex "ostatni(ego|ch|emu|mi|m|(a|ą)|ej|e)?|(po ?)?przedni(ego|ch|emu|mi|m|e|(a|ą)|ej)?"
-    , dimension TimeGrain
-    ]
-  , prod = \tokens -> case tokens of
-      (_:Token TimeGrain grain:_) ->
-        tt . cycleNth grain $ - 1
-      _ -> Nothing
-  }
-
 ruleAfternoon :: Rule
 ruleAfternoon = Rule
   { name = "afternoon"
@@ -556,6 +542,32 @@ ruleAfternoon = Rule
           to = hour False 19
       in Token Time . mkLatent . partOfDay <$>
            interval TTime.Open from to
+  }
+
+ruleEveningnight :: Rule
+ruleEveningnight = Rule
+  { name = "evening|night"
+  , pattern =
+    [ regex "wiecz[oó]r(em|owi|ze|a|u)?|nocą?"
+    ]
+  , prod = \_ ->
+      let from = hour False 18
+          to = hour False 0
+      in Token Time . mkLatent . partOfDay <$>
+           interval TTime.Open from to
+  }
+
+ruleLastCycle :: Rule
+ruleLastCycle = Rule
+  { name = "last <cycle>"
+  , pattern =
+    [ regex "ostatni(ego|ch|emu|mi|m|(a|ą)|ej|e)?|(po ?)?przedni(ego|ch|emu|mi|m|e|(a|ą)|ej)?"
+    , dimension TimeGrain
+    ]
+  , prod = \tokens -> case tokens of
+      (_:Token TimeGrain grain:_) ->
+        tt . cycleNth grain $ - 1
+      _ -> Nothing
   }
 
 ruleHourofdayHourofdayInterval :: Rule
@@ -818,8 +830,7 @@ ruleByTheEndOfTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) -> Token Time <$>
-        interval TTime.Closed (cycleNth TG.Second 0) td
+      (_:Token Time td:_) -> Token Time <$> interval TTime.Closed now td
       _ -> Nothing
   }
 
@@ -868,9 +879,7 @@ ruleWithinDuration = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:Token Duration dd:_) ->
-        let from = cycleNth TG.Second 0
-            to = inDuration dd
-        in Token Time <$> interval TTime.Open from to
+        Token Time <$> interval TTime.Open now (inDuration dd)
       _ -> Nothing
   }
 
@@ -1110,8 +1119,7 @@ ruleThisPartofday = Rule
     , Predicate isAPartOfDay
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) ->
-        Token Time . partOfDay <$> intersect (cycleNth TG.Day 0) td
+      (_:Token Time td:_) -> Token Time . partOfDay <$> intersect today td
       _ -> Nothing
   }
 
@@ -1438,8 +1446,7 @@ ruleByTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) ->
-        Token Time <$> interval TTime.Open (cycleNth TG.Second 0) td
+      (_:Token Time td:_) -> Token Time <$> interval TTime.Open now td
       _ -> Nothing
   }
 
@@ -1500,19 +1507,6 @@ ruleDurationAfterTime = Rule
       (Token Duration dd:_:Token Time td:_) ->
         tt $ durationAfter dd td
       _ -> Nothing
-  }
-
-ruleEveningnight :: Rule
-ruleEveningnight = Rule
-  { name = "evening|night"
-  , pattern =
-    [ regex "wiecz(o|ó)r(em|owi|ze|a|u)?|noc(ą)?"
-    ]
-  , prod = \_ ->
-      let from = hour False 18
-          to = hour False 0
-      in Token Time . mkLatent . partOfDay <$>
-           interval TTime.Open from to
   }
 
 ruleOrdinalQuarter :: Rule

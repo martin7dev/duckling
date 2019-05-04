@@ -41,10 +41,16 @@ import qualified Duckling.Rules.HI as HIRules
 import qualified Duckling.Rules.HR as HRRules
 import qualified Duckling.Rules.HU as HURules
 import qualified Duckling.Rules.ID as IDRules
+import qualified Duckling.Rules.IS as ISRules
 import qualified Duckling.Rules.IT as ITRules
 import qualified Duckling.Rules.JA as JARules
 import qualified Duckling.Rules.KA as KARules
+import qualified Duckling.Rules.KM as KMRules
+import qualified Duckling.Rules.KN as KNRules
 import qualified Duckling.Rules.KO as KORules
+import qualified Duckling.Rules.LO as LORules
+import qualified Duckling.Rules.ML as MLRules
+import qualified Duckling.Rules.MN as MNRules
 import qualified Duckling.Rules.MY as MYRules
 import qualified Duckling.Rules.NB as NBRules
 import qualified Duckling.Rules.NE as NERules
@@ -54,6 +60,7 @@ import qualified Duckling.Rules.PT as PTRules
 import qualified Duckling.Rules.RO as RORules
 import qualified Duckling.Rules.RU as RURules
 import qualified Duckling.Rules.SV as SVRules
+import qualified Duckling.Rules.SW as SWRules
 import qualified Duckling.Rules.TA as TARules
 import qualified Duckling.Rules.TR as TRRules
 import qualified Duckling.Rules.UK as UKRules
@@ -99,10 +106,16 @@ defaultRules HI = HIRules.defaultRules
 defaultRules HR = HRRules.defaultRules
 defaultRules HU = HURules.defaultRules
 defaultRules ID = IDRules.defaultRules
+defaultRules IS = ISRules.defaultRules
 defaultRules IT = ITRules.defaultRules
 defaultRules JA = JARules.defaultRules
 defaultRules KA = KARules.defaultRules
+defaultRules KM = KMRules.defaultRules
+defaultRules KN = KNRules.defaultRules
 defaultRules KO = KORules.defaultRules
+defaultRules LO = LORules.defaultRules
+defaultRules ML = MLRules.defaultRules
+defaultRules MN = MNRules.defaultRules
 defaultRules MY = MYRules.defaultRules
 defaultRules NB = NBRules.defaultRules
 defaultRules NE = NERules.defaultRules
@@ -112,6 +125,7 @@ defaultRules PT = PTRules.defaultRules
 defaultRules RO = RORules.defaultRules
 defaultRules RU = RURules.defaultRules
 defaultRules SV = SVRules.defaultRules
+defaultRules SW = SWRules.defaultRules
 defaultRules TA = TARules.defaultRules
 defaultRules TR = TRRules.defaultRules
 defaultRules UK = UKRules.defaultRules
@@ -137,10 +151,16 @@ localeRules HI = HIRules.localeRules
 localeRules HR = HRRules.localeRules
 localeRules HU = HURules.localeRules
 localeRules ID = IDRules.localeRules
+localeRules IS = ISRules.localeRules
 localeRules IT = ITRules.localeRules
 localeRules JA = JARules.localeRules
 localeRules KA = KARules.localeRules
+localeRules KM = KMRules.localeRules
+localeRules KN = KNRules.localeRules
 localeRules KO = KORules.localeRules
+localeRules LO = LORules.localeRules
+localeRules ML = MLRules.localeRules
+localeRules MN = MNRules.localeRules
 localeRules MY = MYRules.localeRules
 localeRules NB = NBRules.localeRules
 localeRules NE = NERules.localeRules
@@ -150,6 +170,7 @@ localeRules PT = PTRules.localeRules
 localeRules RO = RORules.localeRules
 localeRules RU = RURules.localeRules
 localeRules SV = SVRules.localeRules
+localeRules SW = SWRules.localeRules
 localeRules TA = TARules.localeRules
 localeRules TR = TRRules.localeRules
 localeRules UK = UKRules.localeRules
@@ -172,13 +193,19 @@ langRules FR = FRRules.langRules
 langRules GA = GARules.langRules
 langRules HE = HERules.langRules
 langRules HI = HIRules.langRules
+langRules KN = KNRules.langRules
 langRules HR = HRRules.langRules
 langRules HU = HURules.langRules
 langRules ID = IDRules.langRules
+langRules IS = ISRules.langRules
 langRules IT = ITRules.langRules
 langRules JA = JARules.langRules
 langRules KA = KARules.langRules
+langRules KM = KMRules.langRules
 langRules KO = KORules.langRules
+langRules LO = LORules.langRules
+langRules ML = MLRules.langRules
+langRules MN = MNRules.langRules
 langRules MY = MYRules.langRules
 langRules NB = NBRules.langRules
 langRules NE = NERules.langRules
@@ -188,6 +215,7 @@ langRules PT = PTRules.langRules
 langRules RO = RORules.langRules
 langRules RU = RURules.langRules
 langRules SV = SVRules.langRules
+langRules SW = SWRules.langRules
 langRules TA = TARules.langRules
 langRules TR = TRRules.langRules
 langRules UK = UKRules.langRules

@@ -52,10 +52,16 @@ data Lang
   | HR
   | HU
   | ID
+  | IS
   | IT
   | JA
   | KA
+  | KN
+  | KM
   | KO
+  | LO
+  | ML
+  | MN
   | MY
   | NB
   | NE
@@ -65,6 +71,7 @@ data Lang
   | RO
   | RU
   | SV
+  | SW
   | TA
   | TR
   | UK

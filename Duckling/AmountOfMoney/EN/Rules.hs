@@ -143,6 +143,47 @@ ruleACurrency = Rule
       _ -> Nothing
   }
 
+ruleAbsorbA :: Rule
+ruleAbsorbA = Rule
+  { name = "a <amount-of-money>"
+  , pattern =
+    [ regex "an?"
+    , Predicate isSimpleAmountOfMoney
+    ]
+  , prod = \case
+      (_:Token AmountOfMoney fd:_) -> Just $ Token AmountOfMoney fd
+      _ -> Nothing
+  }
+
+ruleADollarCoin :: Rule
+ruleADollarCoin = Rule
+  { name = "a <dollar coin>"
+  , pattern =
+    [ regex "an?"
+    , Predicate isDollarCoin
+    ]
+  , prod = \tokens -> case tokens of
+      (_:
+       Token AmountOfMoney fd:
+       _) -> Just . Token AmountOfMoney $ fd
+      _ -> Nothing
+  }
+
+ruleNumDollarCoins :: Rule
+ruleNumDollarCoins = Rule
+  { name = "X <dollar coins>"
+  , pattern =
+    [ Predicate isNatural
+    , Predicate isDollarCoin
+    ]
+  , prod = \tokens -> case tokens of
+      (Token Numeral NumeralData{TNumeral.value = c}:
+       Token AmountOfMoney AmountOfMoneyData{TAmountOfMoney.value = Just d,
+                                             TAmountOfMoney.currency = cur}:
+       _) -> Just . Token AmountOfMoney $ withValue (c * d) $ currencyOnly cur
+      _ -> Nothing
+  }
+
 ruleIntersectAndXCents :: Rule
 ruleIntersectAndXCents = Rule
   { name = "intersect (and X cents)"
@@ -327,8 +368,11 @@ rules :: [Rule]
 rules =
   [ ruleUnitAmount
   , ruleACurrency
+  , ruleAbsorbA
   , ruleBucks
   , ruleCent
+  , ruleADollarCoin
+  , ruleNumDollarCoins
   , ruleDinars
   , ruleDirham
   , ruleIntersect

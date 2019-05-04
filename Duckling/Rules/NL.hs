@@ -24,6 +24,7 @@ import qualified Duckling.Distance.NL.Rules as Distance
 import qualified Duckling.Duration.NL.Rules as Duration
 import qualified Duckling.Numeral.NL.Rules as Numeral
 import qualified Duckling.Ordinal.NL.Rules as Ordinal
+import qualified Duckling.Quantity.NL.Rules as Quantity
 import qualified Duckling.Time.NL.Rules as Time
 import qualified Duckling.Time.NL.BE.Rules as TimeBE
 import qualified Duckling.Time.NL.NL.Rules as TimeNL
@@ -41,13 +42,14 @@ localeRules _ _ = []
 
 langRules :: Some Dimension -> [Rule]
 langRules (This AmountOfMoney) = AmountOfMoney.rules
+langRules (This CreditCardNumber) = []
 langRules (This Distance) = Distance.rules
 langRules (This Duration) = Duration.rules
 langRules (This Email) = []
 langRules (This Numeral) = Numeral.rules
 langRules (This Ordinal) = Ordinal.rules
 langRules (This PhoneNumber) = []
-langRules (This Quantity) = []
+langRules (This Quantity) = Quantity.rules
 langRules (This RegexMatch) = []
 langRules (This Temperature) = []
 langRules (This Time) = Time.rules

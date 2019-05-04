@@ -48,8 +48,7 @@ ruleRelativeMinutesTotillbeforeIntegerHourofday = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:_:token:_) -> do
         n <- getIntValue token
-        t <- minutesBefore n td
-        Just $ Token Time t
+        Token Time <$> minutesBefore n td
       _ -> Nothing
   }
 
@@ -64,8 +63,7 @@ ruleRelativeMinutesTotillbeforeNoonmidnight = Rule
   , prod = \tokens -> case tokens of
       (Token Time td:_:token:_) -> do
         n <- getIntValue token
-        t <- minutesBefore n td
-        Just $ Token Time t
+        Token Time <$> minutesBefore n td
       _ -> Nothing
   }
 
@@ -229,8 +227,7 @@ ruleThisDayofweek = Rule
     , Predicate isADayOfWeek
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) ->
-        tt $ predNth 0 False td
+      (_:Token Time td:_) -> tt $ predNth 0 False td
       _ -> Nothing
   }
 
@@ -257,8 +254,7 @@ ruleLastTime = Rule
     , dimension Time
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Time td:_) ->
-        tt $ predNth (-1) False td
+      (_:Token Time td:_) -> tt $ predNth (-1) False td
       _ -> Nothing
   }
 
@@ -270,8 +266,7 @@ ruleInDuration = Rule
     , dimension Duration
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Duration dd:_) ->
-        tt $ inDuration dd
+      (_:Token Duration dd:_) -> tt $ inDuration dd
       _ -> Nothing
   }
 
@@ -281,7 +276,7 @@ ruleNow = Rule
   , pattern =
     [ regex "现在|此时|此刻|当前|現在|此時|當前|\x5b9c\x5bb6|\x800c\x5bb6|\x4f9d\x5bb6"
     ]
-  , prod = \_ -> tt $ cycleNth TG.Second 0
+  , prod = \_ -> tt now
   }
 
 ruleTheCycleAfterTime :: Rule
@@ -329,7 +324,7 @@ ruleToday = Rule
   , pattern =
     [ regex "今天|今日"
     ]
-  , prod = \_ -> tt $ cycleNth TG.Day 0
+  , prod = \_ -> tt today
   }
 
 ruleNextDayofweek :: Rule
@@ -769,12 +764,12 @@ ruleMonthNumericWithMonthSymbol = Rule
   { name = "month (numeric with month symbol)"
   , pattern =
     [ Predicate $ isIntegerBetween 1 12
-    , regex "月"
+    , regex "月(份)?"
     ]
   , prod = \tokens -> case tokens of
       (token:_) -> do
         v <- getIntValue token
-        tt . mkLatent $ month v
+        tt . mkOkForThisNext $ month v
       _ -> Nothing
   }
 
@@ -785,9 +780,8 @@ ruleTonight = Rule
     [ regex "今晚|今天晚上"
     ]
   , prod = \_ -> do
-      let td1 = cycleNth TG.Day 0
       td2 <- interval TTime.Open (hour False 18) (hour False 0)
-      Token Time . partOfDay <$> intersect td1 td2
+      Token Time . partOfDay <$> intersect today td2
   }
 
 ruleTomorrowNight :: Rule
@@ -896,22 +890,6 @@ ruleDaysOfWeek = mkRuleDaysOfWeek
   , ( "Friday", "星期五|周五|礼拜五|禮拜五|週五" )
   , ( "Saturday", "星期六|周六|礼拜六|禮拜六|週六" )
   , ( "Sunday", "星期日|星期天|礼拜天|周日|禮拜天|週日|禮拜日" )
-  ]
-
-ruleMonths :: [Rule]
-ruleMonths = mkRuleMonths
-  [ ( "January", "一月(份)?" )
-  , ( "February", "二月(份)?" )
-  , ( "March", "三月(份)?" )
-  , ( "April", "四月(份)?" )
-  , ( "May", "五月(份)?" )
-  , ( "June", "六月(份)?" )
-  , ( "July", "七月(份)?" )
-  , ( "August", "八月(份)?" )
-  , ( "September", "九月(份)?" )
-  , ( "October", "十月(份)?" )
-  , ( "November", "十一月(份)?" )
-  , ( "December", "十二月(份)?" )
   ]
 
 rulePeriodicHolidays :: [Rule]
@@ -1045,5 +1023,4 @@ rules =
   , ruleTimezone
   ]
   ++ ruleDaysOfWeek
-  ++ ruleMonths
   ++ rulePeriodicHolidays
